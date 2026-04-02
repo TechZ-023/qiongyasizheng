@@ -1,9 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import './App.css'
 import rawData from './data.json'
+import hainnuEduBadge from './assets/hainnu-edu-badge.jpg'
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || ''
 const FILTER_STORAGE_KEY = 'qiongya_filters_v1'
+const ENTRY_STORAGE_KEY = 'qiongya_entry_v1'
+const STAGE_OPTIONS = ['小学', '初中', '高中', '大学'] as const
+const DEFAULT_STAGE = STAGE_OPTIONS[2]
 
 const STAGE_CLR: Record<string,string> = { '小学':'#fbbf24','初中':'#f97316','高中':'#ef4444','大学':'#a78bfa' }
 const STAGE_BG:  Record<string,string> = { '小学':'rgba(251,191,36,0.12)','初中':'rgba(249,115,22,0.12)','高中':'rgba(239,68,68,0.12)','大学':'rgba(167,139,250,0.12)' }
@@ -21,6 +25,8 @@ const REGION_GROUPS: Record<string,string[]> = {
   '西北':['陕西省','甘肃省','青海省','宁夏回族自治区','新疆维吾尔自治区'],
   '港澳台':['香港特别行政区','澳门特别行政区','台湾省'],
 }
+const ALLIANCE_PROVINCE = '海南省'
+const ALLIANCE_KWS = ['思政课一体化', '一体化建设', '区域联盟', '协同育人', '大中小学思政课']
 
 interface Material {
   id: number; title: string; type: string; stage: string[]; tags: { topic: string[]; emotion: string[]; knowledge: string[] }; desc: string
@@ -31,7 +37,119 @@ const DATA: Material[] = rawData as Material[]
 
 interface TextbookItem { stage: string; book: string; lesson: string }
 interface CoreLiteracyItem { name: string; desc: string }
-interface AppFilterState { q: string; st: string; tp: string; pv: string; rg: string; ftzMode: boolean }
+interface AppFilterState { q: string; st: string; tp: string; pv: string; rg: string; ftzMode: boolean; allianceMode: boolean }
+interface EntryState { stage: string; guestMode: boolean }
+type DetailPopupState =
+  | { kind: 'core'; item: CoreLiteracyItem }
+  | { kind: 'textbook'; item: TextbookItem }
+interface PopupAIDiscipline {
+  icon: string
+  name: string
+  cue: string
+  themeClass: string
+}
+
+const POPUP_AI_TEXTBOOK_MODES: PopupAIDiscipline[] = [
+  { icon: '📘', name: '教材内容拆解', cue: '围绕课标与课目要点完成结构化内容解读', themeClass: 'is-humanities' },
+  { icon: '🎯', name: '教学目标重构', cue: '将知识目标、能力目标、价值目标细化到可评估', themeClass: 'is-history' },
+  { icon: '🧩', name: '活动任务设计', cue: '生成可落地的导入、探究、建构、迁移课堂任务链', themeClass: 'is-geography' },
+  { icon: '📊', name: '评价量规生成', cue: '输出过程性与终结性评价指标及评分描述', themeClass: 'is-science' },
+  { icon: '🛠️', name: '分层与改进策略', cue: '针对不同学情给出分层支持与二次优化建议', themeClass: 'is-tech' },
+]
+
+const POPUP_AI_LITERACY_MODES: PopupAIDiscipline[] = [
+  { icon: '🇨🇳', name: '政治认同深化', cue: '强化国家认同、制度认同与历史使命感', themeClass: 'is-humanities' },
+  { icon: '🧠', name: '理性精神深化', cue: '聚焦论证推理、证据意识与批判思维训练', themeClass: 'is-science' },
+  { icon: '⚖️', name: '法治意识深化', cue: '将规则意识、权责边界与法治实践落地', themeClass: 'is-history' },
+  { icon: '🤝', name: '公共参与深化', cue: '设计协作议题与真实情境行动任务', themeClass: 'is-geography' },
+  { icon: '🗣️', name: '表达评价深化', cue: '提升观点表达、同伴互评与反思迁移质量', themeClass: 'is-tech' },
+]
+
+const POPUP_AI_GENERAL_DISCIPLINE: PopupAIDiscipline = {
+  icon: '✨',
+  name: '综合统筹',
+  cue: '以当前弹窗焦点生成可直接落地的完整教学方案',
+  themeClass: 'is-general',
+}
+interface PopupAIHistoryItem {
+  id: number
+  createdAt: string
+  discipline: string
+  focus: string
+  prompt: string
+}
+
+const POPUP_AI_HISTORY_STORAGE_KEY = 'qiongya_popup_ai_history_v1'
+const POPUP_AI_HISTORY_LIMIT = 12
+
+function parsePopupAIHistory(raw: string | null): PopupAIHistoryItem[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(
+      (item): item is PopupAIHistoryItem =>
+        isRecord(item) &&
+        typeof item.id === 'number' &&
+        typeof item.createdAt === 'string' &&
+        typeof item.discipline === 'string' &&
+        typeof item.focus === 'string' &&
+        typeof item.prompt === 'string',
+    )
+  } catch {
+    return []
+  }
+}
+
+function getPopupFocusLabel(popup: DetailPopupState): string {
+  if (popup.kind === 'core') return `核心素养：${popup.item.name}`
+  return `教材：${popup.item.stage}《${popup.item.book}》·${popup.item.lesson}`
+}
+
+function buildPopupAIPrompt(
+  material: Material,
+  popup: DetailPopupState,
+  discipline: PopupAIDiscipline,
+  currentPlan: string,
+): string {
+  const stageText = (material.stage || []).join('、') || '全学段'
+  const knowledgeText = (material.tags?.knowledge || []).slice(0, 3).join('、') || '价值判断、公共参与、责任担当'
+  const popupFocus = popup.kind === 'core'
+    ? `核心素养聚焦：${popup.item.name}（${popup.item.desc}）`
+    : `教材聚焦：${popup.item.stage}《${popup.item.book}》 - ${popup.item.lesson}`
+  const seedPlan = currentPlan || material.annotation || '暂无预存方案，请基于素材重新生成。'
+  const systemFrame = popup.kind === 'core' ? '深化素养AI辅助系统' : '教材内容详情与AI辅助教学模式'
+  const assistAxis = popup.kind === 'core' ? '素养深化方向' : '教学模式方向'
+  const taskChainLabel = popup.kind === 'core' ? '素养深化任务链' : '教材教学任务链'
+  const focusRequirement = popup.kind === 'core'
+    ? '请突出政治学科核心素养的递进式培养与可观察表现。'
+    : '请紧扣该教材课目内容细节，并给出可直接实施的AI辅助教学模式。'
+
+  return `请你扮演资深思政教研专家，参考“${systemFrame}”思路，为当前弹窗焦点生成高质量教学方案。
+
+【资源标题】${material.title}
+【资源简介】${material.desc}
+【学段】${stageText}
+【关键知识点】${knowledgeText}
+【弹窗焦点】${popupFocus}
+【${assistAxis}】${discipline.name}
+【方向提示】${discipline.cue}
+【现有方案底稿】${seedPlan}
+
+请输出一份“可直接上课”的创新方案，结构如下：
+1. 课程定位与核心目标（含学科核心素养映射）
+2. ${taskChainLabel}（导入-探究-建构-迁移，给出活动步骤和产出物）
+3. 分层问题设计（基础/进阶/挑战）
+4. 课堂评价证据（过程性+终结性，含可观察指标）
+5. 作业与延展（至少2个创新实践任务）
+6. 教师反思与优化建议（至少3条）
+
+要求：
+- 语言专业但可执行，避免空泛表述
+- 结合思政课价值引领和学生真实生活情境
+- ${focusRequirement}
+- 输出分点清晰，便于教师直接复制使用`
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -75,6 +193,17 @@ function getContentDetail(material: Material): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
+function isAllianceMaterial(material: Material): boolean {
+  if ((material.province || '') === ALLIANCE_PROVINCE) return true
+  const text = [
+    material.title,
+    material.desc || '',
+    ...(material.tags?.topic || []),
+    ...(material.tags?.knowledge || []),
+  ].join(' ')
+  return ALLIANCE_KWS.some(keyword => text.includes(keyword))
+}
+
 function loadFilterState(): Partial<AppFilterState> {
   try {
     const raw = localStorage.getItem(FILTER_STORAGE_KEY)
@@ -84,6 +213,22 @@ function loadFilterState(): Partial<AppFilterState> {
   } catch {
     return {}
   }
+}
+
+function loadEntryState(): Partial<EntryState> {
+  try {
+    const raw = localStorage.getItem(ENTRY_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return isRecord(parsed) ? parsed as Partial<EntryState> : {}
+  } catch {
+    return {}
+  }
+}
+
+function normalizeStage(value: unknown): string {
+  if (typeof value !== 'string') return DEFAULT_STAGE
+  return STAGE_OPTIONS.includes(value as (typeof STAGE_OPTIONS)[number]) ? value : DEFAULT_STAGE
 }
 
 
@@ -198,15 +343,86 @@ function ShareBoardModal({ onClose }: { onClose: () => void }) {
 
 
 // ── Splash ──────────────────────────────────────────────
-function Splash({ onEnter, onEnterFtz }: { onEnter: () => void; onEnterFtz: () => void }) {
+function StageGate({
+  selectedStage,
+  onSelectStage,
+  onContinue,
+  onGuest,
+}: {
+  selectedStage: string
+  onSelectStage: (stage: string) => void
+  onContinue: () => void
+  onGuest: () => void
+}) {
+  const stageCounts = STAGE_OPTIONS.map((stage) => ({
+    stage,
+    count: DATA.filter((m) => (m.stage || []).includes(stage)).length,
+  }))
+
+  return (
+    <div className="stage-gate">
+      <div className="stage-gate-card">
+        <div className="stage-gate-eyebrow">海南思政智慧资源库</div>
+        <h1 className="stage-gate-title">先选择学段，再进入欢迎页</h1>
+        <p className="stage-gate-sub">系统将按你选择的学段优先筛选资源，也可使用游客模式浏览全学段内容。</p>
+        <div className="stage-gate-grid">
+          {stageCounts.map(({ stage, count }) => (
+            <button
+              key={stage}
+              className={`stage-gate-item ${selectedStage === stage ? 'active' : ''}`}
+              onClick={() => onSelectStage(stage)}
+            >
+              <span className="stage-gate-name">{stage}</span>
+              <span className="stage-gate-count">{count} 条</span>
+            </button>
+          ))}
+        </div>
+        <div className="stage-gate-actions">
+          <button className="stage-gate-primary" onClick={onContinue}>
+            进入欢迎页（{selectedStage}）
+          </button>
+          <button className="stage-gate-guest" onClick={onGuest}>
+            游客模式（浏览全部学段）
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Splash({
+  onEnter,
+  onEnterFtz,
+  onEnterAlliance,
+  onBackToStage,
+  guestMode,
+  selectedStage,
+}: {
+  onEnter: () => void
+  onEnterFtz: () => void
+  onEnterAlliance: () => void
+  onBackToStage: () => void
+  guestMode: boolean
+  selectedStage: string
+}) {
   const ftzCount = DATA.filter(m => m.isFtz).length
+  const allianceCount = DATA.filter(isAllianceMaterial).length
   return (
     <div className="splash">
+      <div className="splash-corner-brand">
+        <img
+          className="splash-corner-logo"
+          src={hainnuEduBadge}
+          alt="海南师范大学教育学院院徽"
+        />
+        <div className="splash-corner-text">海南师范大学教育学院</div>
+      </div>
       <div className="splash-inner">
         <div className="splash-top-line" />
         <div className="splash-eyebrow">🏝️ 海南自由贸易港 · 思政教育数字化平台</div>
         <h1 className="splash-title">AI赋能<br/><span className="splash-title-accent">创新思政</span></h1>
         <p className="splash-sub">智慧资源 · 因材施教 · 全学段覆盖</p>
+        <div className="splash-mode-chip">{guestMode ? '当前模式：游客模式（全学段）' : `当前学段：${selectedStage}`}</div>
         <div className="splash-stats">
           <div className="splash-stat"><div className="ss-num">{DATA.length}</div><div className="ss-label">思政素材</div></div>
           <div className="splash-divider" />
@@ -225,6 +441,8 @@ function Splash({ onEnter, onEnterFtz }: { onEnter: () => void; onEnterFtz: () =
         <div className="splash-btns">
           <button className="splash-enter-btn" onClick={onEnter}>进入海南特色大中小学思政课智慧资源库 →</button>
           <button className="splash-ftz-btn" onClick={onEnterFtz}>🏝️ 海南自由贸易港大思政专题单元（{ftzCount}条）→</button>
+          <button className="splash-alliance-btn" onClick={onEnterAlliance}>🤝 海南省大中小学思政课一体化建设区域联盟专题（{allianceCount}条）→</button>
+          <button className="splash-stage-switch" onClick={onBackToStage}>切换学段/游客模式</button>
         </div>
         <div className="splash-bottom-line" />
       </div>
@@ -412,9 +630,15 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
   const [aiText, setAiText] = useState('')
   const [generating, setGenerating] = useState(false)
   const [regenKey, setRegenKey] = useState(0)
+  const [detailPopup, setDetailPopup] = useState<DetailPopupState | null>(null)
   const textbookMappings = useMemo(() => getTextbookMappings(m), [m])
   const coreLiteracy = useMemo(() => getCoreLiteracy(m), [m])
   const contentDetail = useMemo(() => getContentDetail(m), [m])
+  const [popupHistory, setPopupHistory] = useState<PopupAIHistoryItem[]>(() =>
+    parsePopupAIHistory(localStorage.getItem(POPUP_AI_HISTORY_STORAGE_KEY)),
+  )
+  const [lastPopupPrompt, setLastPopupPrompt] = useState('')
+  const [lastPopupDiscipline, setLastPopupDiscipline] = useState('')
 
   const loadAI = useCallback(async () => {
     setGenerating(true); setAiText('')
@@ -424,9 +648,66 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
   }, [m])
 
   useEffect(() => { loadAI() }, [loadAI, regenKey])
+  useEffect(() => { setDetailPopup(null) }, [m])
+  useEffect(() => {
+    localStorage.setItem(
+      POPUP_AI_HISTORY_STORAGE_KEY,
+      JSON.stringify(popupHistory.slice(0, POPUP_AI_HISTORY_LIMIT)),
+    )
+  }, [popupHistory])
 
   const pct = PERIOD_CLR[m.period||'现当代']||'#22d3ee'
   const isLive = !!aiText && aiText !== m.annotation
+  const openDeepSeekWithHistory = useCallback((prompt: string, disciplineLabel: string, focusLabel: string) => {
+    const popupKnowledge = (m.tags?.knowledge || []).slice(0, 2).join('、') || '课程核心任务'
+    const popupDiscipline = `弹窗AI辅助 · ${disciplineLabel}`
+    const url = `/deepseek.html?title=${encodeURIComponent(m.title)}&desc=${encodeURIComponent(m.desc)}&knowledge=${encodeURIComponent(popupKnowledge)}&discipline=${encodeURIComponent(popupDiscipline)}&prompt=${encodeURIComponent(prompt)}`
+    window.open(url, '_blank')
+    const historyItem: PopupAIHistoryItem = {
+      id: Date.now(),
+      createdAt: new Date().toLocaleString('zh-CN', { hour12: false }),
+      discipline: disciplineLabel,
+      focus: focusLabel,
+      prompt,
+    }
+    setPopupHistory((prev) => [historyItem, ...prev].slice(0, POPUP_AI_HISTORY_LIMIT))
+    setLastPopupPrompt(prompt)
+    setLastPopupDiscipline(disciplineLabel)
+  }, [m])
+
+  const openPopupAIAssistant = useCallback((discipline: PopupAIDiscipline) => {
+    if (!detailPopup) return
+    const prompt = buildPopupAIPrompt(m, detailPopup, discipline, aiText)
+    openDeepSeekWithHistory(prompt, discipline.name, getPopupFocusLabel(detailPopup))
+  }, [detailPopup, m, aiText, openDeepSeekWithHistory])
+
+  const openPopupAIRefine = useCallback(() => {
+    if (!detailPopup) return
+    const basePrompt = lastPopupPrompt || buildPopupAIPrompt(m, detailPopup, POPUP_AI_GENERAL_DISCIPLINE, aiText)
+    const refinePrompt = `${basePrompt}
+
+现在请在“上一版方案”基础上进行二次润色（追问）：
+1. 输出“修订说明”（至少4条，说明你提升了什么）
+2. 补充一段10分钟可执行的课堂高光环节（含师生对话示例）
+3. 提供一份可直接评分的简版评价量规（3个维度，每维度3级描述）
+4. 给出一套“低门槛替代方案”，用于设备不足或时间压缩场景
+
+请保留结构清晰、可复制到教案中直接使用。`
+    const source = lastPopupDiscipline ? `${lastPopupDiscipline} · 二次润色` : '综合统筹 · 二次润色'
+    openDeepSeekWithHistory(refinePrompt, source, getPopupFocusLabel(detailPopup))
+  }, [detailPopup, m, aiText, lastPopupPrompt, lastPopupDiscipline, openDeepSeekWithHistory])
+  const isCorePopup = detailPopup?.kind === 'core'
+  const isTextbookPopup = detailPopup?.kind === 'textbook'
+  const popupAIModes = isCorePopup ? POPUP_AI_LITERACY_MODES : POPUP_AI_TEXTBOOK_MODES
+  const popupAISubtitle = isCorePopup ? '聚焦政治学科核心素养深化' : '聚焦该教材内容详情与AI辅助教学模式'
+  const popupAINotice = isCorePopup
+    ? '已将核心素养焦点自动注入提示词，点击任一方向即可生成“深化素养AI辅助”方案。'
+    : '已将教材课目焦点自动注入提示词，点击任一模式即可生成对应教学方案。'
+  const popupPrimaryActionText = isCorePopup ? '一键生成深化素养方案' : '一键生成教材AI教学模式'
+  const popupSecondaryActionText = isCorePopup ? '二次润色（深化追问）' : '二次润色（教学模式追问）'
+  const popupHelperNote = isCorePopup
+    ? '提示词将自动复制到剪贴板，打开页面后可直接发送并继续做素养深化。'
+    : '提示词将自动复制到剪贴板，打开页面后可直接发送并继续细化教材教学模式。'
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -476,14 +757,41 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
         {coreLiteracy.length > 0 && (
           <div className="modal-section"><h3>🎯 政治学科核心素养</h3>
             <div className="suyang-list">{coreLiteracy.map((s) => (
-              <div key={s.name} className="suyang-item"><span className="suyang-name">{s.name}</span><span className="suyang-desc">{s.desc}</span></div>
+              <button
+                type="button"
+                key={s.name}
+                className="detail-item-btn suyang-item"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setDetailPopup({ kind: 'core', item: s })
+                }}
+              >
+                <span className="suyang-name">{s.name}</span>
+                <span className="suyang-desc">{s.desc}</span>
+                <span className="detail-item-open">查看详情</span>
+              </button>
             ))}</div>
           </div>
         )}
         {textbookMappings.length > 0 && (
           <div className="modal-section"><h3>📖 对应教材与课目</h3>
             <div className="jiaocai-list">{textbookMappings.map((j) => (
-              <div key={j.stage} className="jiaocai-item"><span className="jiaocai-stage">{j.stage}</span><div className="jiaocai-info"><div className="jiaocai-book">📕 {j.book}</div><div className="jiaocai-lesson">📖 {j.lesson}</div></div></div>
+              <button
+                type="button"
+                key={`${j.stage}-${j.book}-${j.lesson}`}
+                className="detail-item-btn jiaocai-item"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setDetailPopup({ kind: 'textbook', item: j })
+                }}
+              >
+                <span className="jiaocai-stage">{j.stage}</span>
+                <div className="jiaocai-info">
+                  <div className="jiaocai-book">📕 {j.book}</div>
+                  <div className="jiaocai-lesson">📖 {j.lesson}</div>
+                </div>
+                <span className="detail-item-open">查看详情</span>
+              </button>
             ))}</div>
           </div>
         )}
@@ -530,6 +838,163 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
         </div>
         <div className="modal-footer"><span className="src-badge">📍 来源：{m.sourceName}</span></div>
       </div>
+      {detailPopup && (
+        <div
+          className="detail-popup-overlay"
+          onClick={(event) => {
+            event.stopPropagation()
+            setDetailPopup(null)
+          }}
+        >
+          <div
+            className={`detail-popup-box detail-popup-${detailPopup.kind}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="detail-popup-close"
+              onClick={(event) => {
+                event.stopPropagation()
+                setDetailPopup(null)
+              }}
+            >
+              ✕
+            </button>
+            <div className="detail-popup-topbar">
+              <span className="detail-popup-topbar-chip">
+                {detailPopup.kind === 'core' ? '核心素养视图' : '教材教研视图'}
+              </span>
+              <span className="detail-popup-topbar-tip">创新 · 深度 · 可落地</span>
+            </div>
+            {detailPopup.kind === 'core' ? (
+              <>
+                <div className="detail-popup-head">
+                  <div className="detail-popup-eyebrow">政治学科核心素养</div>
+                  <h4>{detailPopup.item.name}</h4>
+                  <p>{detailPopup.item.desc}</p>
+                </div>
+                <div className="detail-popup-meta">
+                  <span className="detail-popup-meta-item">关联资源：{m.title}</span>
+                  <span className="detail-popup-meta-item">来源：{m.sourceName}</span>
+                  <span className="detail-popup-meta-item">学段：{(m.stage || []).join(' / ') || '全学段'}</span>
+                </div>
+                <div className="detail-popup-grid">
+                  <section className="detail-popup-card">
+                    <h5>课堂转化建议</h5>
+                    <ul>
+                      <li>以“{m.title}”为情境，组织价值判断与观点表达任务。</li>
+                      <li>围绕 {(m.tags?.knowledge || []).slice(0, 2).join('、') || '核心知识'} 设计问题链，提升思辨深度。</li>
+                      <li>采用“小组讨论 + 展示互评”结构，形成可评价学习证据。</li>
+                    </ul>
+                  </section>
+                  <section className="detail-popup-card">
+                    <h5>教材协同建议</h5>
+                    <ul>
+                      {textbookMappings.length > 0 ? textbookMappings.map((book) => (
+                        <li key={`${book.stage}-${book.book}-${book.lesson}`}>{book.stage} · 《{book.book}》{book.lesson}</li>
+                      )) : <li>暂无教材映射，建议补充校本案例包。</li>}
+                    </ul>
+                  </section>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="detail-popup-head">
+                  <div className="detail-popup-eyebrow">教材深度详情</div>
+                  <h4>{detailPopup.item.stage} · 《{detailPopup.item.book}》</h4>
+                  <p>对应课目：{detailPopup.item.lesson}</p>
+                </div>
+                <div className="detail-popup-meta">
+                  <span className="detail-popup-meta-item">主题资源：{m.title}</span>
+                  <span className="detail-popup-meta-item">知识点：{(m.tags?.knowledge || []).slice(0, 2).join('、') || '待补充'}</span>
+                  <span className="detail-popup-meta-item">来源：{m.sourceName}</span>
+                </div>
+                <div className="detail-popup-grid">
+                  <section className="detail-popup-card">
+                    <h5>教学设计重点</h5>
+                    <ul>
+                      <li>从教材核心概念切入，连接“{m.title}”真实议题。</li>
+                      <li>采用“概念—案例—价值”三段式教学路径。</li>
+                      <li>布置课堂即时反馈任务，确保理解与迁移并行。</li>
+                    </ul>
+                  </section>
+                  <section className="detail-popup-card">
+                    <h5>对应核心素养</h5>
+                    <ul>
+                      {coreLiteracy.length > 0 ? coreLiteracy.map((core) => (
+                        <li key={core.name}>{core.name}：{core.desc}</li>
+                      )) : <li>暂无核心素养数据。</li>}
+                    </ul>
+                  </section>
+                </div>
+              </>
+            )}
+            <section className="detail-popup-ai-system">
+              <div className="detail-popup-ai-head">
+                <h5>{isCorePopup ? '🧠 深化素养AI辅助' : isTextbookPopup ? '📘 教材内容详情与AI辅助教学模式' : '🧠 AI 辅助系统'}</h5>
+                <span>{popupAISubtitle}</span>
+              </div>
+              <p className="detail-popup-ai-sub">
+                {popupAINotice}
+              </p>
+              <div className="detail-popup-ai-actions">
+                <button
+                  type="button"
+                  className="detail-popup-ai-primary"
+                  onClick={() => openPopupAIAssistant(POPUP_AI_GENERAL_DISCIPLINE)}
+                >
+                  {POPUP_AI_GENERAL_DISCIPLINE.icon} {popupPrimaryActionText}
+                </button>
+                <button
+                  type="button"
+                  className="detail-popup-ai-secondary"
+                  onClick={openPopupAIRefine}
+                >
+                  ✍️ {popupSecondaryActionText}
+                </button>
+              </div>
+              <div className="detail-popup-ai-grid">
+                {popupAIModes.map((discipline) => (
+                  <button
+                    type="button"
+                    key={discipline.name}
+                    className={`detail-popup-ai-btn ${discipline.themeClass}`}
+                    onClick={() => openPopupAIAssistant(discipline)}
+                  >
+                    <div className="detail-popup-ai-btn-top">
+                      <span className="detail-popup-ai-icon">{discipline.icon}</span>
+                      <span className="detail-popup-ai-name">{discipline.name}</span>
+                      <span className="detail-popup-ai-arrow">→ DeepSeek</span>
+                    </div>
+                    <div className="detail-popup-ai-cue">{discipline.cue}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="detail-popup-ai-note">{popupHelperNote}</div>
+              <div className="detail-popup-history">
+                <div className="detail-popup-history-title">最近生成记录</div>
+                {popupHistory.length > 0 ? (
+                  <div className="detail-popup-history-list">
+                    {popupHistory.slice(0, 5).map((item) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className="detail-popup-history-item"
+                        onClick={() => openDeepSeekWithHistory(item.prompt, `${item.discipline} · 继续追问`, item.focus)}
+                      >
+                        <span className="detail-popup-history-line">{item.discipline}</span>
+                        <span className="detail-popup-history-meta">{item.focus} · {item.createdAt}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="detail-popup-history-empty">暂无记录，先生成一次方案即可自动沉淀。</div>
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -537,10 +1002,24 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
 // ── 主应用 ──────────────────────────────────────────────
 export default function App() {
   const initialFilters = useMemo(() => loadFilterState(), [])
+  const initialEntry = useMemo(() => loadEntryState(), [])
   const [entered, setEntered] = useState(false)
+  const [stageConfirmed, setStageConfirmed] = useState(false)
+  const [guestMode, setGuestMode] = useState<boolean>(() => initialEntry.guestMode === true)
+  const [selectedStage, setSelectedStage] = useState<string>(() => {
+    if (typeof initialEntry.stage === 'string' && initialEntry.stage) return normalizeStage(initialEntry.stage)
+    if (typeof initialFilters.st === 'string' && initialFilters.st) return normalizeStage(initialFilters.st)
+    return DEFAULT_STAGE
+  })
   const [ftzMode, setFtzMode] = useState<boolean>(() => initialFilters.ftzMode === true)
+  const [allianceMode, setAllianceMode] = useState<boolean>(() => initialFilters.allianceMode === true)
   const [q, setQ] = useState(() => typeof initialFilters.q === 'string' ? initialFilters.q : '')
-  const [st, setSt] = useState(() => typeof initialFilters.st === 'string' ? initialFilters.st : '')
+  const [st, setSt] = useState(() => {
+    if (initialEntry.guestMode === true) return typeof initialFilters.st === 'string' ? initialFilters.st : ''
+    if (typeof initialEntry.stage === 'string' && initialEntry.stage) return normalizeStage(initialEntry.stage)
+    if (typeof initialFilters.st === 'string' && initialFilters.st) return normalizeStage(initialFilters.st)
+    return DEFAULT_STAGE
+  })
   const [tp, setTp] = useState(() => typeof initialFilters.tp === 'string' ? initialFilters.tp : '')
   const [pv, setPv] = useState(() => typeof initialFilters.pv === 'string' ? initialFilters.pv : '')
   const [rg, setRg] = useState(() => typeof initialFilters.rg === 'string' ? initialFilters.rg : '')
@@ -556,11 +1035,22 @@ export default function App() {
   const PAGE_SIZE = 10
 
   const ftzCount = useMemo(() => DATA.filter(m => m.isFtz).length, [])
+  const allianceCount = useMemo(() => DATA.filter(isAllianceMaterial).length, [])
+  const sectionTitle = ftzMode
+    ? '海南自由贸易港大思政专题单元'
+    : allianceMode
+      ? '海南省大中小学思政课一体化建设区域联盟专题'
+      : '海南特色大中小学思政课智慧资源库'
 
   useEffect(() => {
-    const payload: AppFilterState = { q, st, tp, pv, rg, ftzMode }
+    const payload: AppFilterState = { q, st, tp, pv, rg, ftzMode, allianceMode }
     localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(payload))
-  }, [q, st, tp, pv, rg, ftzMode])
+  }, [q, st, tp, pv, rg, ftzMode, allianceMode])
+
+  useEffect(() => {
+    const payload: EntryState = { stage: selectedStage, guestMode }
+    localStorage.setItem(ENTRY_STORAGE_KEY, JSON.stringify(payload))
+  }, [selectedStage, guestMode])
 
   useEffect(() => {
     let cancelled = false
@@ -606,17 +1096,23 @@ export default function App() {
       if (ftzMode) {
         if (!m.isFtz) return false
       }
+      // 区域联盟专题：优先展示海南与一体化建设相关素材
+      if (allianceMode && !isAllianceMaterial(m)) {
+        return false
+      }
+      const matchSelectedStage = guestMode || !selectedStage || (m.stage || []).includes(selectedStage)
       // 关键词搜索
       const textbookSearch = getTextbookMappings(m).flatMap((j) => [j.book, j.lesson])
       const matchQ = !q || [m.title, m.desc||'', ...(m.tags?.topic||[]), ...(m.tags?.knowledge||[]), ...textbookSearch].some((s: string) => s.toLowerCase().includes(q.toLowerCase()))
       const matchS = !st || (m.stage||[]).includes(st)
       const matchT = !tp || m.type === tp
-      // FTZ模式隐藏省份/大区过滤器
-      const matchPv = ftzMode ? true : (!pv || (m.province||'') === pv)
-      const matchRg = ftzMode ? true : (!rg || (() => { const p = m.province||''; const g = Object.entries(REGION_GROUPS).find(([,ps])=>ps.includes(p))?.[0]; return g === rg })())
-      return matchQ && matchS && matchT && matchPv && matchRg
+      // 专题模式隐藏省份/大区过滤器
+      const lockRegionFilter = ftzMode || allianceMode
+      const matchPv = lockRegionFilter ? true : (!pv || (m.province||'') === pv)
+      const matchRg = lockRegionFilter ? true : (!rg || (() => { const p = m.province||''; const g = Object.entries(REGION_GROUPS).find(([,ps])=>ps.includes(p))?.[0]; return g === rg })())
+      return matchSelectedStage && matchQ && matchS && matchT && matchPv && matchRg
     })
-  }, [uploadedMats, q, st, tp, pv, rg, ftzMode])
+  }, [uploadedMats, q, st, tp, pv, rg, ftzMode, allianceMode, guestMode, selectedStage])
 
   const paginated = useMemo(() => list.slice(0, page * PAGE_SIZE), [list, page])
   const hasMore = paginated.length < list.length
@@ -631,13 +1127,73 @@ export default function App() {
   })
   const topTopics = Object.entries(topicCount).sort((a,b)=>b[1]-a[1]).slice(0,12)
   const apiStatusLabel = apiStatus === 'online' ? 'API 在线' : apiStatus === 'offline' ? 'API 离线' : 'API 检查中'
+  const showReset = Boolean(q || tp || pv || rg || (guestMode && st))
   const handleLuckyPick = useCallback(() => {
     if (!list.length) return
     const random = list[Math.floor(Math.random() * list.length)]
     setSelected(random)
   }, [list])
 
-  if (!entered) return <Splash onEnter={() => { setEntered(true); setFtzMode(false) }} onEnterFtz={() => { setEntered(true); setFtzMode(true) }} />
+  if (!stageConfirmed) {
+    return (
+      <StageGate
+        selectedStage={selectedStage}
+        onSelectStage={(stage) => {
+          const normalizedStage = normalizeStage(stage)
+          setSelectedStage(normalizedStage)
+          setSt(normalizedStage)
+        }}
+        onContinue={() => {
+          const normalizedStage = normalizeStage(selectedStage)
+          setGuestMode(false)
+          setSelectedStage(normalizedStage)
+          setSt(normalizedStage)
+          setStageConfirmed(true)
+          setEntered(false)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
+        onGuest={() => {
+          setGuestMode(true)
+          setSt('')
+          setStageConfirmed(true)
+          setEntered(false)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
+      />
+    )
+  }
+
+  if (!entered) {
+    return (
+      <Splash
+        onEnter={() => {
+          setEntered(true)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
+        onEnterFtz={() => {
+          setEntered(true)
+          setFtzMode(true)
+          setAllianceMode(false)
+        }}
+        onEnterAlliance={() => {
+          setEntered(true)
+          setFtzMode(false)
+          setAllianceMode(true)
+        }}
+        onBackToStage={() => {
+          setStageConfirmed(false)
+          setEntered(false)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
+        guestMode={guestMode}
+        selectedStage={selectedStage}
+      />
+    )
+  }
 
   return (
     <div className="app">
@@ -649,17 +1205,42 @@ export default function App() {
       <div className="topbar">
         <div className="topbar-brand">
           <span className="topbar-logo">🏝️</span>
-          <span className="topbar-name">{ftzMode ? '海南自由贸易港大思政专题单元' : '海南特色大中小学思政课智慧资源库'}</span>
+          <span className="topbar-name">{sectionTitle}</span>
+          <span className="entry-mode-pill">{guestMode ? '游客模式' : `学段：${selectedStage}`}</span>
         </div>
         <div className="topbar-tools">
           <button className="topbar-lucky-btn" onClick={handleLuckyPick} disabled={list.length === 0}>🎲 随机一条</button>
           <span className={`api-pill ${apiStatus}`}>{apiStatusLabel}</span>
         </div>
-        <button className="topbar-back" onClick={() => { setEntered(false); setFtzMode(false) }}>← 返回首页</button>
+        <button className="topbar-back" onClick={() => { setEntered(false); setFtzMode(false); setAllianceMode(false) }}>← 返回首页</button>
+        <button className="topbar-mode-btn" onClick={() => { setStageConfirmed(false); setEntered(false); setFtzMode(false); setAllianceMode(false) }}>切换学段/模式</button>
         <button className="topbar-upload-btn" onClick={() => setShowUpload(true)}>📤 上传素材</button>
         <button className="topbar-share-btn" onClick={() => setShowShare(true)}>💬 经验分享</button>
-        <button className="topbar-ftz-btn" onClick={() => setFtzMode(!ftzMode)}>
+        <button
+          className={`topbar-ftz-btn${ftzMode ? ' is-active' : ''}`}
+          onClick={() => {
+            if (ftzMode) {
+              setFtzMode(false)
+              return
+            }
+            setFtzMode(true)
+            setAllianceMode(false)
+          }}
+        >
           {ftzMode ? '🏠 返回资源库' : `🏝️ 自贸港专题(${ftzCount})`}
+        </button>
+        <button
+          className={`topbar-alliance-btn${allianceMode ? ' is-active' : ''}`}
+          onClick={() => {
+            if (allianceMode) {
+              setAllianceMode(false)
+              return
+            }
+            setAllianceMode(true)
+            setFtzMode(false)
+          }}
+        >
+          {allianceMode ? '🏠 返回资源库' : `🤝 区域联盟专题(${allianceCount})`}
         </button>
       </div>
 
@@ -679,6 +1260,21 @@ export default function App() {
           </div>
         </div>
       )}
+      {allianceMode && (
+        <div className="alliance-banner">
+          <div className="alliance-banner-inner">
+            <div className="alliance-banner-left">
+              <div className="alliance-banner-title">🤝 海南省大中小学思政课一体化建设区域联盟专题</div>
+              <div className="alliance-banner-sub">课程共建 · 教研共研 · 学段衔接 · 资源共享 · 协同育人</div>
+            </div>
+            <div className="alliance-banner-right">
+              <div className="alliance-stat"><div className="alliance-stat-num">{list.length}</div><div className="alliance-stat-lbl">专题素材</div></div>
+              <div className="alliance-stat"><div className="alliance-stat-num">4</div><div className="alliance-stat-lbl">学段贯通</div></div>
+              <div className="alliance-stat"><div className="alliance-stat-num">1</div><div className="alliance-stat-lbl">区域联盟</div></div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search & Filter */}
       <div className="search-area">
@@ -687,28 +1283,69 @@ export default function App() {
           <input
             ref={searchInputRef}
             className="sbi"
-            placeholder={ftzMode ? "搜索海南自贸港专题素材，如：零关税、封关、GDP..." : "输入关键词 / 课程标题 / 章节序号搜索，如：七年级道德与法治 第一课..."}
+            placeholder={
+              ftzMode
+                ? '搜索海南自贸港专题素材，如：零关税、封关、GDP...'
+                : allianceMode
+                  ? '搜索区域联盟专题素材，如：一体化、课程衔接、协同育人...'
+                  : '输入关键词 / 课程标题 / 章节序号搜索，如：七年级道德与法治 第一课...'
+            }
             value={q}
             onChange={e=>{setQ(e.target.value);setPage(1)}}
           />
           {q&&<button className="scb" onClick={()=>setQ('')}>✕</button>}
         </div>
-        <div className="filter-row">
-          {!ftzMode && (
-            <select className="prov-select" value={pv} onChange={e=>{setPv(e.target.value);setRg('');setPage(1)}}>
-              <option value="">全部省份</option>
-              {ALL_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
+        <div className="filter-row filter-row-stack">
+          {!ftzMode && !allianceMode && (
+            <div className="filter-line filter-line-region">
+              <span className="filter-line-label">地区筛选</span>
+              <select className="prov-select filter-select" value={rg} onChange={e=>{setRg(e.target.value);setPv('');setPage(1)}}>
+                <option value="">全部地区</option>
+                {Object.keys(REGION_GROUPS).map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
           )}
-          {!ftzMode && (
-            <select className="prov-select" value={rg} onChange={e=>{setRg(e.target.value);setPv('');setPage(1)}}>
-              <option value="">全部大区</option>
-              {Object.keys(REGION_GROUPS).map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+          {!ftzMode && !allianceMode && (
+            <div className="filter-line filter-line-province">
+              <span className="filter-line-label">省份筛选</span>
+              <select className="prov-select filter-select" value={pv} onChange={e=>{setPv(e.target.value);setRg('');setPage(1)}}>
+                <option value="">全部省份</option>
+                {ALL_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
           )}
-          {['','小学','初中','高中','大学'].map(s => <button key={s} className={`fb ${st===s?'active':''}`} onClick={()=>{setSt(s);setPage(1)}}>{s||'全部'}</button>)}
-          {[['document','📄'],['video','🎬'],['image','🖼'],['audio','🎧'],['multimedia','🎭']].map(([k,l]) => <button key={k} className={`fb ${tp===k?'active':''}`} onClick={()=>{setTp(tp===k?'':k);setPage(1)}}>{l}</button>)}
-          {(q||st||tp||pv||rg)&&<button className="fb reset" onClick={()=>{setQ('');setSt('');setTp('');setPv('');setRg('');setPage(1)}}>⟳ 重置</button>}
+          {guestMode ? (
+            <div className="filter-line filter-line-stage">
+              <span className="filter-line-label">学段筛选</span>
+              <div className="filter-chip-group">
+                {['', ...STAGE_OPTIONS].map(s => <button key={s} className={`fb ${st===s?'active':''}`} onClick={()=>{setSt(s);setPage(1)}}>{s||'全部'}</button>)}
+              </div>
+            </div>
+          ) : (
+            <div className="filter-line filter-line-stage filter-section-stage-lock">
+              <span className="filter-line-label">学段筛选</span>
+              <div className="stage-lock-row">
+                <span className="stage-lock-pill">{selectedStage}（已自动筛选）</span>
+                <button
+                  className="fb stage-guest-switch"
+                  onClick={() => {
+                    setGuestMode(true)
+                    setSt('')
+                    setPage(1)
+                  }}
+                >
+                  切换游客模式
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="filter-line filter-line-type">
+            <span className="filter-line-label">类型筛选</span>
+            <div className="filter-chip-group">
+              {[['document','📄','文档'],['video','🎬','视频'],['image','🖼','图片'],['audio','🎧','音频'],['multimedia','🎭','多媒体']].map(([k,icon,label]) => <button key={k} className={`fb ${tp===k?'active':''}`} onClick={()=>{setTp(tp===k?'':k);setPage(1)}}>{icon} {label}</button>)}
+              {showReset&&<button className="fb reset filter-reset-btn" onClick={()=>{setQ('');setSt(guestMode ? '' : selectedStage);setTp('');setPv('');setRg('');setPage(1)}}>⟳ 重置</button>}
+            </div>
+          </div>
         </div>
         <div className="result-bar">
           <span><strong>{list.length}</strong> 条素材</span>
@@ -766,7 +1403,7 @@ export default function App() {
               return <div key={s} className="s-bar-row"><span className="s-bar-label">{s}</span><div className="s-bar"><div style={{height:'100%',width:p+'%',background:STAGE_CLR[s]||'#94a3b8',borderRadius:4}}/></div><span className="s-bar-cnt">{c}</span></div>
             })}
           </div>
-          {!ftzMode && (
+          {!ftzMode && !allianceMode && (
             <div className="s-card">
               <div className="s-title">🗺️ 省份分布 TOP10</div>
               {Object.entries(Object.entries(list.reduce((acc,m)=>{const p=m.province||'全国';acc[p]=(acc[p]||0)+1;return acc},{} as Record<string,number>)).sort((a,b)=>b[1]-a[1]).slice(0,10)).map(([p,c])=>{
@@ -781,7 +1418,7 @@ export default function App() {
       <footer className="footer">
         <div className="footer-logo">🏝️</div>
         <div>
-          <div className="footer-title">{ftzMode ? '海南自由贸易港大思政专题单元' : '海南特色大中小学思政课智慧资源库'}</div>
+          <div className="footer-title">{sectionTitle}</div>
           <div className="footer-sub">© 2026 思政教育智慧平台 · Powered by MiniMax AI · 海南自由贸易港</div>
         </div>
       </footer>
