@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>跨学科方案 - DeepSeek</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a2e,#16213e);font-family:'PingFang SC','Microsoft YaHei',sans-serif;color:#fff}
+  .card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:48px 40px;max-width:560px;width:90%;text-align:center;backdrop-filter:blur(20px)}
+  .logo{font-size:48px;margin-bottom:16px}
+  h2{font-size:20px;font-weight:700;margin-bottom:12px;color:#f0f6ff}
+  p{color:rgba(255,255,255,0.6);font-size:14px;line-height:1.7;margin-bottom:24px}
+  .prompt-box{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;text-align:left;margin-bottom:24px;max-height:200px;overflow-y:auto;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.7}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 36px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border:none;border-radius:50px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.3s;text-decoration:none}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(79,70,229,0.4)}
+  .api-note{font-size:11px;color:rgba(255,255,255,0.35);margin-top:16px}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dotting{margin-left:4px;color:rgba(255,255,255,0.5)}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="logo">🔗</div>
+  <h2>跨学科融合方案生成器</h2>
+  <p id="desc">正在准备跨学科教学提示词，请稍候<span class="dotting">...</span></p>
+  <div class="prompt-box" id="promptBox" style="display:none"></div>
+  <a class="btn" id="btn" href="#" target="_blank">
+    <span id="btnText">➡️ 打开 DeepSeek 对话</span>
+  </a>
+  <div class="api-note">提示词已准备完毕，点击上方按钮跳转至 DeepSeek 网页版</div>
+</div>
+<script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const title = params.get('title') || '思政课素材';
+  const desc = params.get('desc') || '';
+  const knowledge = params.get('knowledge') || '';
+  const discipline = params.get('discipline') || '';
+  const fullPrompt = params.get('prompt') || '';
+
+  document.getElementById('desc').textContent = '素材：' + title + ' | 学科：' + discipline;
+  document.getElementById('btnText').textContent = '➡️ 打开 DeepSeek 并发送提示词';
+
+  if(fullPrompt){
+    const box = document.getElementById('promptBox');
+    box.style.display = 'block';
+    // 分行显示更友好
+    const formatted = fullPrompt.replace(/\\n/g, '\n').replace(/\n{2,}/g, '\n\n');
+    box.textContent = formatted;
+    // 复制到剪贴板
+    navigator.clipboard.writeText(formatted).then(()=>{
+      document.getElementById('btnText').textContent = '✅ 提示词已复制 → 打开 DeepSeek';
+    }).catch(()=>{
+      document.getElementById('btnText').textContent = '➡️ 打开 DeepSeek 对话';
+    });
+    // DeepSeek 对话 URL（支持搜索参数）
+    const encoded = encodeURIComponent(formatted);
+    document.getElementById('btn').href = 'https://chat.deepseek.com/?prompt=' + encoded;
+  } else {
+    document.getElementById('desc').textContent = '未获取到提示词参数，请返回资源库重试';
+  }
+})();
+</script>
+</body>
+</html>
