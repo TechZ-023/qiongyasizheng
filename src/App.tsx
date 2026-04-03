@@ -28,6 +28,257 @@ const REGION_GROUPS: Record<string,string[]> = {
 const ALLIANCE_PROVINCE = '海南省'
 const ALLIANCE_KWS = ['思政课一体化', '一体化建设', '区域联盟', '协同育人', '大中小学思政课']
 
+interface AllianceResourceEntry {
+  title: string
+  org: string
+  date: string
+  tag: string
+  url: string
+  summary: string
+}
+
+interface AllianceConsultEntry {
+  channel: string
+  target: string
+  detail: string
+  actionLabel: string
+  url: string
+}
+
+interface AllianceColumnItem {
+  column: string
+  scene: string
+  examples: string
+  existingResources: Array<{
+    title: string
+    source: string
+    date: string
+    url: string
+  }>
+}
+
+const ALLIANCE_OFFICIAL_RESOURCES: AllianceResourceEntry[] = [
+  {
+    title: '教育部关于开展大中小学思政课一体化共同体建设的通知',
+    org: '教育部',
+    date: '2023-12-15',
+    tag: '国家政策',
+    url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202312/t20231215_1094091.html',
+    summary: '明确全国共同体建设方向，提出“跨学段贯通、跨区域协同、资源共建共享”的重点任务。',
+  },
+  {
+    title: '海南师范大学推进“校内、校际、校地”协同联动',
+    org: '教育部网站（报道）',
+    date: '2024-05-13',
+    tag: '省域实践',
+    url: 'https://www.moe.gov.cn/fbh/live/2024/55895/mtbd/202405/t20240513_1130500.html',
+    summary: '聚焦海南经验，介绍海师大在一体化建设中的协同推进路径。',
+  },
+  {
+    title: '海南师范大学举办海南省大中小学思政课一体化建设研讨会',
+    org: '海南师范大学',
+    date: '2025-03-03',
+    tag: '联盟研讨',
+    url: 'https://www.hainnu.edu.cn/info/1021/61927.htm',
+    summary: '发布海南四大片区联盟实践进展，涵盖协同育人和学段贯通交流。',
+  },
+  {
+    title: '海南大学开展西部联盟“同题异构”教学展示交流活动',
+    org: '海南大学新闻网',
+    date: '2024-06-08',
+    tag: '片区教研',
+    url: 'https://news.hainanu.edu.cn/cc/64/c10503a248932/page.htm',
+    summary: '围绕西部联盟推动跨学段教研共同体建设，强化课堂示范与研修联动。',
+  },
+  {
+    title: '海南热带海洋学院举办南部联盟同题异构活动',
+    org: '海南热带海洋学院',
+    date: '2024-04-11',
+    tag: '片区教研',
+    url: 'https://www.hntou.edu.cn/yth/info/1026/1766.htm',
+    summary: '面向南部联盟开展公开课与评课研讨，推进区域课程衔接。',
+  },
+  {
+    title: '琼台师范学院举办东部联盟同题异构教学展示活动',
+    org: '琼台师范学院',
+    date: '2024-06-12',
+    tag: '片区教研',
+    url: 'https://www.qtnu.edu.cn/info/1047/35388.htm',
+    summary: '聚焦东部联盟一体化教学展示，推动中小学与高校思政课共研。',
+  },
+  {
+    title: '海南师范大学马克思主义学院举行集体备课会',
+    org: '海南师范大学马克思主义学院',
+    date: '2024-03-30',
+    tag: '集体备课',
+    url: 'https://marxism.hainnu.edu.cn/info/1198/10275.htm',
+    summary: '围绕思政课教学内容与方法开展集体备课，服务跨学段教学协同。',
+  },
+  {
+    title: '海南师范大学举办中小学思政课教师教学比赛',
+    org: '海南师范大学新闻网',
+    date: '2025-03-29',
+    tag: '教师发展',
+    url: 'https://news.hainnu.edu.cn/info/1024/76095.htm',
+    summary: '以赛促研、以赛促教，促进联盟内教师队伍能力提升与经验共享。',
+  },
+]
+
+const ALLIANCE_CONSULT_CHANNELS: AllianceConsultEntry[] = [
+  {
+    channel: '海南省教育厅官网咨询',
+    target: '政策解读、活动安排、业务咨询',
+    detail: '通过海南省教育厅官网“互动交流/咨询”渠道提交问题；公开页面展示咨询服务热线：0898-65322302（以官网最新公示为准）。',
+    actionLabel: '进入省厅官网',
+    url: 'https://edu.hainan.gov.cn/',
+  },
+  {
+    channel: '北部联盟咨询入口',
+    target: '大中小学思政课一体化北部片区活动',
+    detail: '由海南师范大学牵头，可通过海师大马克思主义学院官网获取研讨、备课和通知信息。',
+    actionLabel: '查看海师大马院',
+    url: 'https://marxism.hainnu.edu.cn/',
+  },
+  {
+    channel: '西部联盟咨询入口',
+    target: '西部片区同题异构与实践教学活动',
+    detail: '由海南大学牵头，可通过海南大学马克思主义学院官网及相关新闻页面跟进活动安排。',
+    actionLabel: '查看海南大学马院',
+    url: 'https://marxism.hainanu.edu.cn/',
+  },
+  {
+    channel: '南部/东部联盟咨询入口',
+    target: '片区教研展示、课程衔接与协同共建',
+    detail: '可通过海南热带海洋学院、琼台师范学院官网发布的联盟活动信息对接片区交流。',
+    actionLabel: '查看南部联盟活动',
+    url: 'https://www.hntou.edu.cn/yth/info/1026/1766.htm',
+  },
+  {
+    channel: '国家层面政策咨询入口',
+    target: '共同体建设政策口径与标准依据',
+    detail: '教育部一体化共同体建设通知页面是跨区域工作对齐的重要政策依据。',
+    actionLabel: '查看教育部通知',
+    url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202312/t20231215_1094091.html',
+  },
+]
+
+const ALLIANCE_CONTENT_COLUMNS: AllianceColumnItem[] = [
+  {
+    column: '同题异构课例',
+    scene: '跨学段衔接课、展示课、公开课',
+    examples: '上传“同一主题在小学/初中/高中/大学”的教学设计与课堂实录。',
+    existingResources: [
+      {
+        title: '海南大学举办西部联盟同题异构选拔赛',
+        source: '海南大学马克思主义学院',
+        date: '2025-04-11',
+        url: 'https://mks.hainanu.edu.cn/info/1064/11372.htm',
+      },
+      {
+        title: '琼台师范学院举办东部联盟同题异构教学展示活动',
+        source: '琼台师范学院',
+        date: '2024-06-12',
+        url: 'https://www.qtnu.edu.cn/info/1047/35388.htm',
+      },
+    ],
+  },
+  {
+    column: '集体备课成果',
+    scene: '联盟片区集备、校际联合教研',
+    examples: '上传主备稿、说课稿、共案修订记录、教学反思。',
+    existingResources: [
+      {
+        title: '海南大学举行西部联盟第一次集体备课会',
+        source: '海南大学马克思主义学院',
+        date: '2024-01-16',
+        url: 'https://marxism.hainanu.edu.cn/info/1064/10992.htm',
+      },
+      {
+        title: '海南大学召开西部联盟第一次线上视频集体备课会',
+        source: '海南大学马克思主义学院',
+        date: '2023-09-17',
+        url: 'https://marxism.hainanu.edu.cn/info/1064/10632.htm',
+      },
+    ],
+  },
+  {
+    column: '教学资源包',
+    scene: '课件、任务单、评价量规、素材包',
+    examples: '上传可直接复用的课堂素材，注明适用学段和课时建议。',
+    existingResources: [
+      {
+        title: '教育部办公厅关于开展大中小学思政课一体化共同体建设的通知',
+        source: '教育部',
+        date: '2023-12-15',
+        url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202312/t20231215_1094091.html',
+      },
+      {
+        title: '教育部部署推进大中小学思政课一体化建设',
+        source: '教育部新闻发布',
+        date: '2023-01-12',
+        url: 'https://www.moe.gov.cn/jyb_xwfb/s5147/202301/t20230112_1039087.html',
+      },
+    ],
+  },
+  {
+    column: '实践育人案例',
+    scene: '红色研学、社会调查、主题实践',
+    examples: '上传活动方案、学生作品与过程性评价证据。',
+    existingResources: [
+      {
+        title: '海南热带海洋学院举办南部联盟同题异构活动',
+        source: '海南热带海洋学院',
+        date: '2024-04-11',
+        url: 'https://www.hntou.edu.cn/yth/info/1026/1766.htm',
+      },
+      {
+        title: '海南热带海洋学院开展思政课一体化选拔赛',
+        source: '海南热带海洋学院',
+        date: '2025-06-22',
+        url: 'https://www.hntou.edu.cn/xwzx/xywh/202506/t20250622_96980.html',
+      },
+    ],
+  },
+  {
+    column: '教师发展专题',
+    scene: '教学竞赛、示范课观摩、培训研修',
+    examples: '上传竞赛成果、培训讲义和可复制的教研组织方式。',
+    existingResources: [
+      {
+        title: '海南师范大学举办中小学思政课教师教学比赛',
+        source: '海南师范大学新闻网',
+        date: '2025-03-29',
+        url: 'https://news.hainnu.edu.cn/info/1024/76095.htm',
+      },
+      {
+        title: '琼台师范学院教师在教学展示活动获佳绩',
+        source: '琼台师范学院',
+        date: '2025-04-24',
+        url: 'https://www.qtnu.edu.cn/info/1151/73851.htm',
+      },
+    ],
+  },
+  {
+    column: '校地协同项目',
+    scene: '高校-中小学-地方协同育人',
+    examples: '上传联盟共建项目方案、阶段成果与推广建议。',
+    existingResources: [
+      {
+        title: '海南师范大学推进“校内、校际、校地”协同联动',
+        source: '教育部网站（报道）',
+        date: '2024-05-13',
+        url: 'https://www.moe.gov.cn/fbh/live/2024/55895/mtbd/202405/t20240513_1130500.html',
+      },
+      {
+        title: '海南师范大学举办海南省大中小学思政课一体化建设研讨会',
+        source: '海南师范大学',
+        date: '2025-03-03',
+        url: 'https://www.hainnu.edu.cn/info/1021/61927.htm',
+      },
+    ],
+  },
+]
+
 interface Material {
   id: number; title: string; type: string; stage: string[]; tags: { topic: string[]; emotion: string[]; knowledge: string[] }; desc: string
   source: string; sourceName: string; date: string; views: number; annotation: string
@@ -37,7 +288,7 @@ const DATA: Material[] = rawData as Material[]
 
 interface TextbookItem { stage: string; book: string; lesson: string }
 interface CoreLiteracyItem { name: string; desc: string }
-interface AppFilterState { q: string; st: string; tp: string; pv: string; rg: string; ftzMode: boolean; allianceMode: boolean }
+interface AppFilterState { q: string; st: string; tp: string; pv: string; rg: string; topic: string; ftzMode: boolean; allianceMode: boolean }
 interface EntryState { stage: string; guestMode: boolean }
 type DetailPopupState =
   | { kind: 'core'; item: CoreLiteracyItem }
@@ -1023,6 +1274,7 @@ export default function App() {
   const [tp, setTp] = useState(() => typeof initialFilters.tp === 'string' ? initialFilters.tp : '')
   const [pv, setPv] = useState(() => typeof initialFilters.pv === 'string' ? initialFilters.pv : '')
   const [rg, setRg] = useState(() => typeof initialFilters.rg === 'string' ? initialFilters.rg : '')
+  const [topic, setTopic] = useState(() => typeof initialFilters.topic === 'string' ? initialFilters.topic : '')
   const [selected, setSelected] = useState<Material|null>(null)
   const [showUpload, setShowUpload] = useState(false)
   const [showShare, setShowShare] = useState(false)
@@ -1043,9 +1295,9 @@ export default function App() {
       : '海南特色大中小学思政课智慧资源库'
 
   useEffect(() => {
-    const payload: AppFilterState = { q, st, tp, pv, rg, ftzMode, allianceMode }
+    const payload: AppFilterState = { q, st, tp, pv, rg, topic, ftzMode, allianceMode }
     localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(payload))
-  }, [q, st, tp, pv, rg, ftzMode, allianceMode])
+  }, [q, st, tp, pv, rg, topic, ftzMode, allianceMode])
 
   useEffect(() => {
     const payload: EntryState = { stage: selectedStage, guestMode }
@@ -1106,13 +1358,14 @@ export default function App() {
       const matchQ = !q || [m.title, m.desc||'', ...(m.tags?.topic||[]), ...(m.tags?.knowledge||[]), ...textbookSearch].some((s: string) => s.toLowerCase().includes(q.toLowerCase()))
       const matchS = !st || (m.stage||[]).includes(st)
       const matchT = !tp || m.type === tp
+      const matchTopic = !topic || (m.tags?.topic || []).includes(topic)
       // 专题模式隐藏省份/大区过滤器
       const lockRegionFilter = ftzMode || allianceMode
       const matchPv = lockRegionFilter ? true : (!pv || (m.province||'') === pv)
       const matchRg = lockRegionFilter ? true : (!rg || (() => { const p = m.province||''; const g = Object.entries(REGION_GROUPS).find(([,ps])=>ps.includes(p))?.[0]; return g === rg })())
-      return matchSelectedStage && matchQ && matchS && matchT && matchPv && matchRg
+      return matchSelectedStage && matchQ && matchS && matchT && matchTopic && matchPv && matchRg
     })
-  }, [uploadedMats, q, st, tp, pv, rg, ftzMode, allianceMode, guestMode, selectedStage])
+  }, [uploadedMats, q, st, tp, pv, rg, topic, ftzMode, allianceMode, guestMode, selectedStage])
 
   const paginated = useMemo(() => list.slice(0, page * PAGE_SIZE), [list, page])
   const hasMore = paginated.length < list.length
@@ -1127,12 +1380,22 @@ export default function App() {
   })
   const topTopics = Object.entries(topicCount).sort((a,b)=>b[1]-a[1]).slice(0,12)
   const apiStatusLabel = apiStatus === 'online' ? 'API 在线' : apiStatus === 'offline' ? 'API 离线' : 'API 检查中'
-  const showReset = Boolean(q || tp || pv || rg || (guestMode && st))
+  const showReset = Boolean(q || tp || pv || rg || topic || (guestMode && st))
   const handleLuckyPick = useCallback(() => {
     if (!list.length) return
     const random = list[Math.floor(Math.random() * list.length)]
     setSelected(random)
   }, [list])
+  const handleSidebarStageClick = useCallback((stage: string) => {
+    if (!guestMode) {
+      setGuestMode(true)
+      setSt(stage)
+      setPage(1)
+      return
+    }
+    setSt(st === stage ? '' : stage)
+    setPage(1)
+  }, [guestMode, st])
 
   if (!stageConfirmed) {
     return (
@@ -1275,6 +1538,86 @@ export default function App() {
           </div>
         </div>
       )}
+      {allianceMode && (
+        <section className="alliance-hub">
+          <div className="alliance-hub-inner">
+            <div className="alliance-upload-hero">
+              <div className="alliance-upload-kicker">联盟共建入口</div>
+              <h3>📤 显著上传资源渠道</h3>
+              <p>
+                欢迎上传课堂实录、同题异构教案、跨学段衔接案例、实践育人素材。提交后会进入“我的上传资源”并参与联盟共建。
+              </p>
+              <button className="alliance-upload-hero-btn" onClick={() => setShowUpload(true)}>
+                立即上传联盟资源
+              </button>
+            </div>
+            <div className="alliance-resource-board">
+              <div className="alliance-board-title">📚 海南省思政课一体化联盟官方资源</div>
+              <div className="alliance-resource-layout">
+                <div className="alliance-content-column">
+                  <div className="alliance-content-column-title">🗂 联盟资源内容栏</div>
+                  <div className="alliance-content-column-list">
+                    {ALLIANCE_CONTENT_COLUMNS.map((item) => (
+                      <div key={item.column} className="alliance-content-item">
+                        <div className="alliance-content-item-title">{item.column}</div>
+                        <div className="alliance-content-item-scene">适用场景：{item.scene}</div>
+                        <p className="alliance-content-item-examples">{item.examples}</p>
+                        <div className="alliance-content-existing-list">
+                          {item.existingResources.map((resource) => (
+                            <a
+                              key={`${item.column}-${resource.url}`}
+                              className="alliance-content-existing-item"
+                              href={resource.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <span className="alliance-content-existing-title">{resource.title}</span>
+                              <span className="alliance-content-existing-meta">{resource.source} · {resource.date}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="alliance-content-upload-btn" onClick={() => setShowUpload(true)}>
+                    按栏目上传资源
+                  </button>
+                </div>
+                <div className="alliance-resource-grid">
+                  {ALLIANCE_OFFICIAL_RESOURCES.map((item) => (
+                    <a key={item.url} className="alliance-resource-card" href={item.url} target="_blank" rel="noopener noreferrer">
+                      <div className="alliance-resource-head">
+                        <span className="alliance-resource-tag">{item.tag}</span>
+                        <span className="alliance-resource-date">{item.date}</span>
+                      </div>
+                      <div className="alliance-resource-title">{item.title}</div>
+                      <div className="alliance-resource-org">{item.org}</div>
+                      <p className="alliance-resource-summary">{item.summary}</p>
+                      <span className="alliance-resource-link">查看原文 ↗</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="alliance-consult-wrap">
+            <div className="alliance-board-title">🧭 联盟咨询渠道（真实可查）</div>
+            <div className="alliance-consult-grid">
+              {ALLIANCE_CONSULT_CHANNELS.map((item) => (
+                <a key={`${item.channel}-${item.url}`} className="alliance-consult-card" href={item.url} target="_blank" rel="noopener noreferrer">
+                  <div className="alliance-consult-channel">{item.channel}</div>
+                  <div className="alliance-consult-target">{item.target}</div>
+                  <p className="alliance-consult-detail">{item.detail}</p>
+                  <span className="alliance-consult-link">{item.actionLabel} ↗</span>
+                </a>
+              ))}
+            </div>
+            <p className="alliance-consult-note">
+              注：以上入口均来自教育部、海南省教育系统及高校官方公开页面；请以对应网站最新公告为准。
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Search & Filter */}
       <div className="search-area">
@@ -1343,7 +1686,7 @@ export default function App() {
             <span className="filter-line-label">类型筛选</span>
             <div className="filter-chip-group">
               {[['document','📄','文档'],['video','🎬','视频'],['image','🖼','图片'],['audio','🎧','音频'],['multimedia','🎭','多媒体']].map(([k,icon,label]) => <button key={k} className={`fb ${tp===k?'active':''}`} onClick={()=>{setTp(tp===k?'':k);setPage(1)}}>{icon} {label}</button>)}
-              {showReset&&<button className="fb reset filter-reset-btn" onClick={()=>{setQ('');setSt(guestMode ? '' : selectedStage);setTp('');setPv('');setRg('');setPage(1)}}>⟳ 重置</button>}
+              {showReset&&<button className="fb reset filter-reset-btn" onClick={()=>{setQ('');setSt(guestMode ? '' : selectedStage);setTp('');setPv('');setRg('');setTopic('');setPage(1)}}>⟳ 重置</button>}
             </div>
           </div>
         </div>
@@ -1394,13 +1737,36 @@ export default function App() {
         <div className="sidebar">
           <div className="s-card">
             <div className="s-title">📂 主题分类</div>
-            {topTopics.map(([t,c])=>(<div key={t} className="s-topic-row"><span className="s-topic-name">#{t}</span><span className="s-topic-cnt">{c}</span></div>))}
+            {topTopics.map(([t,c])=>(
+              <button
+                key={t}
+                type="button"
+                className={`s-topic-row${topic===t?' is-active':''}`}
+                onClick={() => { setTopic(topic===t ? '' : t); setPage(1) }}
+                aria-pressed={topic===t}
+              >
+                <span className="s-topic-name">#{t}</span>
+                <span className="s-topic-cnt">{c}</span>
+              </button>
+            ))}
           </div>
           <div className="s-card">
             <div className="s-title">🎓 学段分布</div>
             {(['小学','初中','高中','大学'] as string[]).map(s=>{
               const c=stageCount[s]||0; const p=list.length>0?Math.round(c/list.length*100):0
-              return <div key={s} className="s-bar-row"><span className="s-bar-label">{s}</span><div className="s-bar"><div style={{height:'100%',width:p+'%',background:STAGE_CLR[s]||'#94a3b8',borderRadius:4}}/></div><span className="s-bar-cnt">{c}</span></div>
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  className={`s-bar-row${st===s?' is-active':''}`}
+                  onClick={() => handleSidebarStageClick(s)}
+                  aria-pressed={st===s}
+                >
+                  <span className="s-bar-label">{s}</span>
+                  <div className="s-bar"><div style={{height:'100%',width:p+'%',background:STAGE_CLR[s]||'#94a3b8',borderRadius:4}}/></div>
+                  <span className="s-bar-cnt">{c}</span>
+                </button>
+              )
             })}
           </div>
           {!ftzMode && !allianceMode && (
@@ -1408,7 +1774,19 @@ export default function App() {
               <div className="s-title">🗺️ 省份分布 TOP10</div>
               {Object.entries(Object.entries(list.reduce((acc,m)=>{const p=m.province||'全国';acc[p]=(acc[p]||0)+1;return acc},{} as Record<string,number>)).sort((a,b)=>b[1]-a[1]).slice(0,10)).map(([p,c])=>{
                 const p4=list.length>0?Math.round(Number(c)/list.length*100):0
-                return <div key={p} className="s-bar-row"><span className="s-bar-label" style={{fontSize:11}}>{p}</span><div className="s-bar"><div style={{height:'100%',width:p4+'%',background:'#dc2626',borderRadius:4}}/></div><span className="s-bar-cnt">{c}</span></div>
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`s-bar-row${pv===p?' is-active':''}`}
+                    onClick={() => { setPv(pv===p ? '' : p); setRg(''); setPage(1) }}
+                    aria-pressed={pv===p}
+                  >
+                    <span className="s-bar-label" style={{fontSize:11}}>{p}</span>
+                    <div className="s-bar"><div style={{height:'100%',width:p4+'%',background:'#dc2626',borderRadius:4}}/></div>
+                    <span className="s-bar-cnt">{c}</span>
+                  </button>
+                )
               })}
             </div>
           )}
@@ -1422,6 +1800,11 @@ export default function App() {
           <div className="footer-sub">© 2026 思政教育智慧平台 · Powered by MiniMax AI · 海南自由贸易港</div>
         </div>
       </footer>
+      {allianceMode && (
+        <button className="alliance-float-upload-btn" onClick={() => setShowUpload(true)}>
+          📤 上传联盟资源
+        </button>
+      )}
     </div>
   )
 }
