@@ -1196,13 +1196,13 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app${ftzMode ? ' app-ftz' : ''}${allianceMode ? ' app-alliance' : ''}`}>
       {selected && <DetailModal m={selected} onClose={()=>setSelected(null)} />}
       {showUpload && <UploadModal onClose={()=>setShowUpload(false)} onAdd={(m)=>{setUploadedMats(prev=>[...prev,m]);setShowUpload(false);setEntered(true)}} />}
       {showShare && <ShareBoardModal onClose={()=>setShowShare(false)} />}
 
       {/* Top bar */}
-      <div className="topbar">
+      <div className={`topbar${ftzMode ? ' topbar-ftz' : ''}${allianceMode ? ' topbar-alliance' : ''}`}>
         <div className="topbar-brand">
           <span className="topbar-logo">🏝️</span>
           <span className="topbar-name">{sectionTitle}</span>
