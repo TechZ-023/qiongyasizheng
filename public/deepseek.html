@@ -1,66 +1,410 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>跨学科方案 - DeepSeek</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a2e,#16213e);font-family:'PingFang SC','Microsoft YaHei',sans-serif;color:#fff}
-  .card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:48px 40px;max-width:560px;width:90%;text-align:center;backdrop-filter:blur(20px)}
-  .logo{font-size:48px;margin-bottom:16px}
-  h2{font-size:20px;font-weight:700;margin-bottom:12px;color:#f0f6ff}
-  p{color:rgba(255,255,255,0.6);font-size:14px;line-height:1.7;margin-bottom:24px}
-  .prompt-box{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 18px;text-align:left;margin-bottom:24px;max-height:200px;overflow-y:auto;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.7}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 36px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border:none;border-radius:50px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.3s;text-decoration:none}
-  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(79,70,229,0.4)}
-  .api-note{font-size:11px;color:rgba(255,255,255,0.35);margin-top:16px}
-  .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .dotting{margin-left:4px;color:rgba(255,255,255,0.5)}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 辅助工作台 · DeepSeek</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --ink: #0f172a;
+      --muted: #475569;
+      --card: rgba(255, 255, 255, 0.86);
+      --line: #dbeafe;
+      --brand: #dc2626;
+      --brand-dark: #991b1b;
+      --link: #1d4ed8;
+      --ok: #166534;
+      --warn-bg: #fffbeb;
+      --warn-line: #fcd34d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(860px 420px at 8% -4%, #fee2e2 0%, transparent 62%),
+        radial-gradient(920px 500px at 100% 100%, #dbeafe 0%, transparent 60%),
+        var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .shell {
+      width: min(1080px, 100%);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+      background: linear-gradient(130deg, #fff7ed 0%, #fef2f2 46%, #eff6ff 100%);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      color: var(--brand-dark);
+      border: 1px solid rgba(220, 38, 38, 0.22);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      padding: 4px 10px;
+    }
+
+    .kbd {
+      font-size: 11px;
+      color: #1e3a8a;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    h1 {
+      font-size: clamp(1.1rem, 2vw, 1.45rem);
+      line-height: 1.34;
+      margin-bottom: 8px;
+    }
+
+    .sub {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.45fr;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .panel {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+    }
+
+    .meta-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .meta-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+      padding: 10px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+      margin-bottom: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    .meta-value {
+      font-size: 13px;
+      line-height: 1.7;
+      color: #0f172a;
+      word-break: break-word;
+    }
+
+    .tips {
+      margin-top: 10px;
+      border: 1px solid var(--warn-line);
+      background: var(--warn-bg);
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 12px;
+      color: #92400e;
+      line-height: 1.7;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: saturate(1.05);
+    }
+
+    .btn-open {
+      color: #fff;
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      box-shadow: 0 10px 20px rgba(220, 38, 38, 0.28);
+    }
+
+    .btn-copy {
+      color: #1d4ed8;
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .btn-back {
+      color: #334155;
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .status {
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ok);
+      padding-left: 2px;
+    }
+
+    details {
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #1e3a8a;
+      background: linear-gradient(135deg, #eff6ff, #f8fafc);
+      border-bottom: 1px solid #dbeafe;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .prompt {
+      margin: 0;
+      padding: 12px;
+      max-height: 420px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.76;
+      font-size: 12px;
+      color: #1f2937;
+      background: #fff;
+    }
+
+    .prompt-empty {
+      color: #7f1d1d;
+      background: #fef2f2;
+    }
+
+    @media (max-width: 880px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .prompt {
+        max-height: 300px;
+      }
+    }
+  </style>
 </head>
 <body>
-<div class="card" id="card">
-  <div class="logo">🔗</div>
-  <h2>跨学科融合方案生成器</h2>
-  <p id="desc">正在准备跨学科教学提示词，请稍候<span class="dotting">...</span></p>
-  <div class="prompt-box" id="promptBox" style="display:none"></div>
-  <a class="btn" id="btn" href="#" target="_blank">
-    <span id="btnText">➡️ 打开 DeepSeek 对话</span>
-  </a>
-  <div class="api-note">提示词已准备完毕，点击上方按钮跳转至 DeepSeek 网页版</div>
-</div>
-<script>
-(function(){
-  const params = new URLSearchParams(window.location.search);
-  const title = params.get('title') || '思政课素材';
-  const desc = params.get('desc') || '';
-  const knowledge = params.get('knowledge') || '';
-  const discipline = params.get('discipline') || '';
-  const fullPrompt = params.get('prompt') || '';
+  <main class="shell">
+    <header class="header">
+      <div class="header-top">
+        <span class="badge">🧠 AI 辅助工作台</span>
+        <span class="kbd">快捷键：Ctrl / Cmd + Enter</span>
+      </div>
+      <h1>提示词已就绪，复制或一键跳转 DeepSeek 即可继续生成</h1>
+      <p class="sub">已自动读取主站传入的素材信息与提示词，你可以先快速预览，再决定直接发送或继续微调。</p>
+    </header>
 
-  document.getElementById('desc').textContent = '素材：' + title + ' | 学科：' + discipline;
-  document.getElementById('btnText').textContent = '➡️ 打开 DeepSeek 并发送提示词';
+    <section class="grid">
+      <aside class="panel">
+        <div class="meta-list">
+          <div class="meta-item">
+            <div class="meta-label">素材标题</div>
+            <div class="meta-value" id="metaTitle">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">目标方向</div>
+            <div class="meta-value" id="metaDiscipline">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">知识点</div>
+            <div class="meta-value" id="metaKnowledge">-</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">素材简介</div>
+            <div class="meta-value" id="metaDesc">-</div>
+          </div>
+        </div>
+        <div class="tips">
+          小技巧：先点“复制提示词”，再打开 DeepSeek 对话框粘贴发送；若要快速重复操作，可直接使用快捷键。
+        </div>
+      </aside>
 
-  if(fullPrompt){
-    const box = document.getElementById('promptBox');
-    box.style.display = 'block';
-    // 分行显示更友好
-    const formatted = fullPrompt.replace(/\\n/g, '\n').replace(/\n{2,}/g, '\n\n');
-    box.textContent = formatted;
-    // 复制到剪贴板
-    navigator.clipboard.writeText(formatted).then(()=>{
-      document.getElementById('btnText').textContent = '✅ 提示词已复制 → 打开 DeepSeek';
-    }).catch(()=>{
-      document.getElementById('btnText').textContent = '➡️ 打开 DeepSeek 对话';
-    });
-    // DeepSeek 对话 URL（支持搜索参数）
-    const encoded = encodeURIComponent(formatted);
-    document.getElementById('btn').href = 'https://chat.deepseek.com/?prompt=' + encoded;
-  } else {
-    document.getElementById('desc').textContent = '未获取到提示词参数，请返回资源库重试';
-  }
-})();
-</script>
+      <section class="panel">
+        <div class="actions">
+          <a id="openBtn" class="btn btn-open" href="#" target="_blank" rel="noopener noreferrer">🔗 打开 DeepSeek</a>
+          <button id="copyBtn" class="btn btn-copy" type="button">📋 复制提示词</button>
+          <button id="backBtn" class="btn btn-back" type="button">↩ 返回上一页</button>
+        </div>
+        <div id="status" class="status"></div>
+        <details open>
+          <summary>
+            <span>提示词预览</span>
+            <span id="countText">0 字</span>
+          </summary>
+          <pre id="promptBox" class="prompt"></pre>
+        </details>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const title = params.get('title') || '思政课素材';
+      const desc = params.get('desc') || '暂无描述';
+      const knowledge = params.get('knowledge') || '暂无';
+      const discipline = params.get('discipline') || 'AI 教学方案优化';
+      const rawPrompt = params.get('prompt') || '';
+      const prompt = rawPrompt.replace(/\\n/g, '\n').trim();
+
+      const metaTitle = document.getElementById('metaTitle');
+      const metaDiscipline = document.getElementById('metaDiscipline');
+      const metaKnowledge = document.getElementById('metaKnowledge');
+      const metaDesc = document.getElementById('metaDesc');
+      const status = document.getElementById('status');
+      const promptBox = document.getElementById('promptBox');
+      const countText = document.getElementById('countText');
+      const copyBtn = document.getElementById('copyBtn');
+      const openBtn = document.getElementById('openBtn');
+      const backBtn = document.getElementById('backBtn');
+
+      metaTitle.textContent = title;
+      metaDiscipline.textContent = discipline;
+      metaKnowledge.textContent = knowledge;
+      metaDesc.textContent = desc;
+
+      const charCount = prompt.replace(/\s+/g, '').length;
+      countText.textContent = `${charCount} 字`;
+
+      function setStatus(message, isError) {
+        status.textContent = message;
+        status.style.color = isError ? '#991b1b' : '#166534';
+      }
+
+      async function copyPrompt() {
+        if (!prompt) {
+          setStatus('未检测到提示词，请返回主站重新发起。', true);
+          return false;
+        }
+        try {
+          await navigator.clipboard.writeText(prompt);
+          setStatus('提示词已复制，可以直接粘贴发送。', false);
+          return true;
+        } catch (error) {
+          const textarea = document.createElement('textarea');
+          textarea.value = prompt;
+          textarea.style.position = 'fixed';
+          textarea.style.left = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.select();
+          const copied = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          setStatus(copied ? '提示词已复制，可以直接粘贴发送。' : '复制失败，请手动复制下方提示词。', !copied);
+          return copied;
+        }
+      }
+
+      if (prompt) {
+        promptBox.textContent = prompt;
+        const encoded = encodeURIComponent(prompt);
+        openBtn.href = `https://chat.deepseek.com/?prompt=${encoded}`;
+        void copyPrompt();
+      } else {
+        promptBox.textContent = '未收到提示词参数，请返回素材详情页重新点击 DeepSeek 按钮。';
+        promptBox.classList.add('prompt-empty');
+        openBtn.setAttribute('aria-disabled', 'true');
+        openBtn.style.pointerEvents = 'none';
+        openBtn.style.opacity = '0.55';
+        setStatus('当前不可跳转：提示词为空。', true);
+      }
+
+      copyBtn.addEventListener('click', function () {
+        void copyPrompt();
+      });
+
+      backBtn.addEventListener('click', function () {
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+        window.location.href = '/';
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          if (!openBtn.href || openBtn.getAttribute('aria-disabled') === 'true') return;
+          window.open(openBtn.href, '_blank', 'noopener,noreferrer');
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

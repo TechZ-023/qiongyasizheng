@@ -2,6 +2,10 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import './App.css'
 import rawData from './data.json'
 import hainnuEduBadge from './assets/hainnu-edu-badge.jpg'
+import allianceHainnuLogo from './assets/alliance-logos/hainnu-logo.jpg'
+import allianceHainanuLogo from './assets/alliance-logos/hainanu-logo.jpg'
+import allianceHntouLogo from './assets/alliance-logos/hntou-logo.jpg'
+import allianceQtnuLogo from './assets/alliance-logos/qtnu-logo.jpg'
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || ''
 const FILTER_STORAGE_KEY = 'qiongya_filters_v1'
@@ -27,6 +31,17 @@ const REGION_GROUPS: Record<string,string[]> = {
 }
 const ALLIANCE_PROVINCE = '海南省'
 const ALLIANCE_KWS = ['思政课一体化', '一体化建设', '区域联盟', '协同育人', '大中小学思政课']
+const ALLIANCE_INTRO_REGION_NODES = [
+  '北部联盟（海南师范大学牵头）',
+  '西部联盟（海南大学牵头）',
+  '南部联盟（海南热带海洋学院牵头）',
+  '东部联盟（琼台师范学院牵头）',
+]
+const ALLIANCE_INTRO_HIGHLIGHTS = [
+  '在海南省教育厅统筹下，形成“高校牵头+市县联动+中小学参与”的协同推进机制。',
+  '围绕同题异构、集体备课、实践基地共建、教师发展等场景，常态化开展跨学段教研。',
+  '聚焦课程衔接、资源共建共享与协同育人，推动思政课从分段实施走向全程贯通。',
+]
 
 interface AllianceResourceEntry {
   title: string
@@ -57,70 +72,133 @@ interface AllianceColumnItem {
   }>
 }
 
+interface AllianceSchoolEntry {
+  name: string
+  role: string
+  logo: string
+  logoSource: string
+  site: string
+}
+
+interface AllianceMilestone {
+  title: string
+  node: string
+  desc: string
+}
+
+interface AllianceActionEntry {
+  title: string
+  detail: string
+  actionLabel: string
+  url: string
+}
+
+type UploadScene = 'general' | 'alliance_same_class'
+
 const ALLIANCE_OFFICIAL_RESOURCES: AllianceResourceEntry[] = [
   {
-    title: '教育部关于开展大中小学思政课一体化共同体建设的通知',
+    title: '教育部办公厅关于开展大中小学思政课一体化共同体建设的通知',
     org: '教育部',
-    date: '2023-12-15',
+    date: '2023-01-10',
     tag: '国家政策',
-    url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202312/t20231215_1094091.html',
-    summary: '明确全国共同体建设方向，提出“跨学段贯通、跨区域协同、资源共建共享”的重点任务。',
+    url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202301/t20230109_1038750.html',
+    summary: '明确共同体建设总体目标与重点任务，是区域联盟组织实施的重要政策依据。',
   },
   {
-    title: '海南师范大学推进“校内、校际、校地”协同联动',
-    org: '教育部网站（报道）',
-    date: '2024-05-13',
-    tag: '省域实践',
-    url: 'https://www.moe.gov.cn/fbh/live/2024/55895/mtbd/202405/t20240513_1130500.html',
-    summary: '聚焦海南经验，介绍海师大在一体化建设中的协同推进路径。',
+    title: '中小学思政课建设工作座谈会召开',
+    org: '教育部',
+    date: '2025-05-23',
+    tag: '国家动态',
+    url: 'https://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/moe_1485/202505/t20250523_1191664.html',
+    summary: '部署新时代思政课建设重点任务，为各地推进一体化建设提供工作指引。',
   },
   {
-    title: '海南师范大学举办海南省大中小学思政课一体化建设研讨会',
+    title: '思政课从“分段独奏”到“全程交响”',
+    org: '教育部',
+    date: '2025-11-06',
+    tag: '改革解读',
+    url: 'https://www.moe.gov.cn/jyb_xwfb/xw_zt/moe_357/2025/2025_zt18/szqhjszyx/202511/t20251118_1420773.html',
+    summary: '专题阐释一体化建设路径，强调大中小学纵向贯通、协同育人。',
+  },
+  {
+    title: '海南省“大中小学思政课一体化共同体”工作交流研讨会在海师大召开',
     org: '海南师范大学',
-    date: '2025-03-03',
-    tag: '联盟研讨',
-    url: 'https://www.hainnu.edu.cn/info/1021/61927.htm',
-    summary: '发布海南四大片区联盟实践进展，涵盖协同育人和学段贯通交流。',
+    date: '2025-08-09',
+    tag: '省域联盟',
+    url: 'https://webplus.hainnu.edu.cn/_s3/2025/0809/c1648a157596/page.psp',
+    summary: '面向全省交流一体化共同体建设进展，推进四大片区协同机制落地。',
   },
   {
-    title: '海南大学开展西部联盟“同题异构”教学展示交流活动',
-    org: '海南大学新闻网',
-    date: '2024-06-08',
-    tag: '片区教研',
-    url: 'https://news.hainanu.edu.cn/cc/64/c10503a248932/page.htm',
-    summary: '围绕西部联盟推动跨学段教研共同体建设，强化课堂示范与研修联动。',
+    title: '2025年海南省大中小学思政课一体化“同题异构”教学比赛在海师大举行',
+    org: '海南师范大学',
+    date: '2025-10-18',
+    tag: '教学竞赛',
+    url: 'https://webplus.hainnu.edu.cn/_s3/2025/1018/c1648a159720/page.psp',
+    summary: '汇聚多学段教师同题异构展示，强化课程衔接与教研共研。',
   },
   {
-    title: '海南热带海洋学院举办南部联盟同题异构活动',
-    org: '海南热带海洋学院',
-    date: '2024-04-11',
-    tag: '片区教研',
-    url: 'https://www.hntou.edu.cn/yth/info/1026/1766.htm',
-    summary: '面向南部联盟开展公开课与评课研讨，推进区域课程衔接。',
+    title: '全国思政课战线集体备课会在海口举行',
+    org: '海南师范大学',
+    date: '2025-12-27',
+    tag: '高端研修',
+    url: 'https://webplus.hainnu.edu.cn/_s3/2025/1227/c1648a162320/page.psp',
+    summary: '围绕党的创新理论融入思政课，开展跨学段集体备课与教学研讨。',
   },
   {
-    title: '琼台师范学院举办东部联盟同题异构教学展示活动',
-    org: '琼台师范学院',
-    date: '2024-06-12',
-    tag: '片区教研',
-    url: 'https://www.qtnu.edu.cn/info/1047/35388.htm',
-    summary: '聚焦东部联盟一体化教学展示，推动中小学与高校思政课共研。',
+    title: '海南大学区域联盟举办同题异构选拔赛',
+    org: '海南大学马克思主义学院',
+    date: '2025-07-05',
+    tag: '西部片区',
+    url: 'https://mks.hainanu.edu.cn/info/1064/11372.htm',
+    summary: '聚焦区域联盟课堂展示与赛课研课，促进高校与中小学课堂协同。',
   },
   {
-    title: '海南师范大学马克思主义学院举行集体备课会',
-    org: '海南师范大学马克思主义学院',
-    date: '2024-03-30',
+    title: '海南大学一体化建设首次集体备课活动举办',
+    org: '海南大学马克思主义学院',
+    date: '2025-05-26',
     tag: '集体备课',
-    url: 'https://marxism.hainnu.edu.cn/info/1198/10275.htm',
-    summary: '围绕思政课教学内容与方法开展集体备课，服务跨学段教学协同。',
+    url: 'https://mks.hainanu.edu.cn/info/1293/11232.htm',
+    summary: '围绕共同教学主题开展跨学段共备，沉淀可复用教案与教学任务链。',
   },
   {
-    title: '海南师范大学举办中小学思政课教师教学比赛',
-    org: '海南师范大学新闻网',
-    date: '2025-03-29',
-    tag: '教师发展',
-    url: 'https://news.hainnu.edu.cn/info/1024/76095.htm',
-    summary: '以赛促研、以赛促教，促进联盟内教师队伍能力提升与经验共享。',
+    title: '海南大学10月集体备课活动举行',
+    org: '海南大学马克思主义学院',
+    date: '2024-10-10',
+    tag: '西部片区',
+    url: 'https://mks.hainanu.edu.cn/info/1064/8102.htm',
+    summary: '持续推进月度集体备课机制，强化议题共研与资源共建。',
+  },
+  {
+    title: '南部片区“万名师生同讲海南故事”教学展示活动举行',
+    org: '海南热带海洋学院',
+    date: '2025-05-10',
+    tag: '南部片区',
+    url: 'https://www.hntou.edu.cn/xwzx/xxyw/202505/t20250510_95835.html',
+    summary: '依托“大思政课”实践基地推进区域联盟实践教学与协同育人。',
+  },
+  {
+    title: '海南热带海洋学院区域联盟同题异构选拔赛举行',
+    org: '海南热带海洋学院',
+    date: '2025-06-22',
+    tag: '教学竞赛',
+    url: 'https://www.hntou.edu.cn/xwzx/xywh/202506/t20250622_96980.html',
+    summary: '面向一体化建设开展课堂教学选拔，推动南部片区教研联动。',
+  },
+  {
+    title: '海南热带海洋学院推进高校与实践基地协同育人',
+    org: '海南热带海洋学院',
+    date: '2025-04-14',
+    tag: '协同育人',
+    url: 'https://www.hntou.edu.cn/xwzx/xxyw/202504/t20250414_95174.html',
+    summary: '以校地协同机制推动思政课实践教学资源整合与育人闭环。',
+  },
+  {
+    title: '琼台师范学院区域联盟在同题异构比赛中获佳绩',
+    org: '琼台师范学院',
+    date: '2025-10-19',
+    tag: '东部片区',
+    url: 'https://www.qtnu.edu.cn/info/1151/73851.htm',
+    summary: '展示东部片区教师团队建设成效与一体化教学实践成果。',
   },
 ]
 
@@ -135,30 +213,37 @@ const ALLIANCE_CONSULT_CHANNELS: AllianceConsultEntry[] = [
   {
     channel: '北部联盟咨询入口',
     target: '大中小学思政课一体化北部片区活动',
-    detail: '由海南师范大学牵头，可通过海师大马克思主义学院官网获取研讨、备课和通知信息。',
-    actionLabel: '查看海师大马院',
-    url: 'https://marxism.hainnu.edu.cn/',
+    detail: '由海南师范大学牵头，可通过海师大发布的共同体工作交流信息对接北部片区教研活动。',
+    actionLabel: '查看海师大片区动态',
+    url: 'https://webplus.hainnu.edu.cn/_s3/2025/0809/c1648a157596/page.psp',
   },
   {
     channel: '西部联盟咨询入口',
     target: '西部片区同题异构与实践教学活动',
-    detail: '由海南大学牵头，可通过海南大学马克思主义学院官网及相关新闻页面跟进活动安排。',
+    detail: '由海南大学牵头，可通过海南大学马院发布的集体备课与赛事通知持续跟进片区活动。',
     actionLabel: '查看海南大学马院',
-    url: 'https://marxism.hainanu.edu.cn/',
+    url: 'https://mks.hainanu.edu.cn/info/1293/11232.htm',
   },
   {
-    channel: '南部/东部联盟咨询入口',
-    target: '片区教研展示、课程衔接与协同共建',
-    detail: '可通过海南热带海洋学院、琼台师范学院官网发布的联盟活动信息对接片区交流。',
-    actionLabel: '查看南部联盟活动',
-    url: 'https://www.hntou.edu.cn/yth/info/1026/1766.htm',
+    channel: '南部联盟咨询入口',
+    target: '实践教学基地、教学展示与协同育人活动',
+    detail: '可通过海南热带海洋学院发布的南部片区区域联盟活动信息对接教研与实践资源。',
+    actionLabel: '查看南部片区活动',
+    url: 'https://www.hntou.edu.cn/xwzx/xxyw/202505/t20250510_95835.html',
+  },
+  {
+    channel: '东部联盟咨询入口',
+    target: '教学比赛、教研展示与教师发展活动',
+    detail: '可通过琼台师范学院区域联盟赛事与成果页面，了解东部片区最新工作安排。',
+    actionLabel: '查看东部片区成果',
+    url: 'https://www.qtnu.edu.cn/info/1151/73851.htm',
   },
   {
     channel: '国家层面政策咨询入口',
     target: '共同体建设政策口径与标准依据',
     detail: '教育部一体化共同体建设通知页面是跨区域工作对齐的重要政策依据。',
     actionLabel: '查看教育部通知',
-    url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202312/t20231215_1094091.html',
+    url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202301/t20230109_1038750.html',
   },
 ]
 
@@ -169,16 +254,16 @@ const ALLIANCE_CONTENT_COLUMNS: AllianceColumnItem[] = [
     examples: '上传“同一主题在小学/初中/高中/大学”的教学设计与课堂实录。',
     existingResources: [
       {
-        title: '海南大学举办西部联盟同题异构选拔赛',
-        source: '海南大学马克思主义学院',
-        date: '2025-04-11',
-        url: 'https://mks.hainanu.edu.cn/info/1064/11372.htm',
+        title: '2025年海南省大中小学思政课一体化“同题异构”教学比赛在海师大举行',
+        source: '海南师范大学',
+        date: '2025-10-18',
+        url: 'https://webplus.hainnu.edu.cn/_s3/2025/1018/c1648a159720/page.psp',
       },
       {
-        title: '琼台师范学院举办东部联盟同题异构教学展示活动',
-        source: '琼台师范学院',
-        date: '2024-06-12',
-        url: 'https://www.qtnu.edu.cn/info/1047/35388.htm',
+        title: '海南大学区域联盟举办同题异构选拔赛',
+        source: '海南大学马克思主义学院',
+        date: '2025-07-05',
+        url: 'https://mks.hainanu.edu.cn/info/1064/11372.htm',
       },
     ],
   },
@@ -188,16 +273,16 @@ const ALLIANCE_CONTENT_COLUMNS: AllianceColumnItem[] = [
     examples: '上传主备稿、说课稿、共案修订记录、教学反思。',
     existingResources: [
       {
-        title: '海南大学举行西部联盟第一次集体备课会',
+        title: '海南大学一体化建设首次集体备课活动举办',
         source: '海南大学马克思主义学院',
-        date: '2024-01-16',
-        url: 'https://marxism.hainanu.edu.cn/info/1064/10992.htm',
+        date: '2025-05-26',
+        url: 'https://mks.hainanu.edu.cn/info/1293/11232.htm',
       },
       {
-        title: '海南大学召开西部联盟第一次线上视频集体备课会',
+        title: '海南大学10月集体备课活动举行',
         source: '海南大学马克思主义学院',
-        date: '2023-09-17',
-        url: 'https://marxism.hainanu.edu.cn/info/1064/10632.htm',
+        date: '2024-10-10',
+        url: 'https://mks.hainanu.edu.cn/info/1064/8102.htm',
       },
     ],
   },
@@ -209,14 +294,14 @@ const ALLIANCE_CONTENT_COLUMNS: AllianceColumnItem[] = [
       {
         title: '教育部办公厅关于开展大中小学思政课一体化共同体建设的通知',
         source: '教育部',
-        date: '2023-12-15',
-        url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202312/t20231215_1094091.html',
+        date: '2023-01-10',
+        url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202301/t20230109_1038750.html',
       },
       {
-        title: '教育部部署推进大中小学思政课一体化建设',
-        source: '教育部新闻发布',
-        date: '2023-01-12',
-        url: 'https://www.moe.gov.cn/jyb_xwfb/s5147/202301/t20230112_1039087.html',
+        title: '思政课从“分段独奏”到“全程交响”',
+        source: '教育部',
+        date: '2025-11-06',
+        url: 'https://www.moe.gov.cn/jyb_xwfb/xw_zt/moe_357/2025/2025_zt18/szqhjszyx/202511/t20251118_1420773.html',
       },
     ],
   },
@@ -226,16 +311,16 @@ const ALLIANCE_CONTENT_COLUMNS: AllianceColumnItem[] = [
     examples: '上传活动方案、学生作品与过程性评价证据。',
     existingResources: [
       {
-        title: '海南热带海洋学院举办南部联盟同题异构活动',
+        title: '南部片区“万名师生同讲海南故事”教学展示活动举行',
         source: '海南热带海洋学院',
-        date: '2024-04-11',
-        url: 'https://www.hntou.edu.cn/yth/info/1026/1766.htm',
+        date: '2025-05-10',
+        url: 'https://www.hntou.edu.cn/xwzx/xxyw/202505/t20250510_95835.html',
       },
       {
-        title: '海南热带海洋学院开展思政课一体化选拔赛',
+        title: '海南热带海洋学院推进高校与实践基地协同育人',
         source: '海南热带海洋学院',
-        date: '2025-06-22',
-        url: 'https://www.hntou.edu.cn/xwzx/xywh/202506/t20250622_96980.html',
+        date: '2025-04-14',
+        url: 'https://www.hntou.edu.cn/xwzx/xxyw/202504/t20250414_95174.html',
       },
     ],
   },
@@ -245,15 +330,15 @@ const ALLIANCE_CONTENT_COLUMNS: AllianceColumnItem[] = [
     examples: '上传竞赛成果、培训讲义和可复制的教研组织方式。',
     existingResources: [
       {
-        title: '海南师范大学举办中小学思政课教师教学比赛',
-        source: '海南师范大学新闻网',
-        date: '2025-03-29',
-        url: 'https://news.hainnu.edu.cn/info/1024/76095.htm',
+        title: '海南热带海洋学院区域联盟同题异构选拔赛举行',
+        source: '海南热带海洋学院',
+        date: '2025-06-22',
+        url: 'https://www.hntou.edu.cn/xwzx/xywh/202506/t20250622_96980.html',
       },
       {
-        title: '琼台师范学院教师在教学展示活动获佳绩',
+        title: '琼台师范学院区域联盟在同题异构比赛中获佳绩',
         source: '琼台师范学院',
-        date: '2025-04-24',
+        date: '2025-10-19',
         url: 'https://www.qtnu.edu.cn/info/1151/73851.htm',
       },
     ],
@@ -264,20 +349,108 @@ const ALLIANCE_CONTENT_COLUMNS: AllianceColumnItem[] = [
     examples: '上传联盟共建项目方案、阶段成果与推广建议。',
     existingResources: [
       {
-        title: '海南师范大学推进“校内、校际、校地”协同联动',
-        source: '教育部网站（报道）',
-        date: '2024-05-13',
-        url: 'https://www.moe.gov.cn/fbh/live/2024/55895/mtbd/202405/t20240513_1130500.html',
+        title: '海南省“大中小学思政课一体化共同体”工作交流研讨会在海师大召开',
+        source: '海南师范大学',
+        date: '2025-08-09',
+        url: 'https://webplus.hainnu.edu.cn/_s3/2025/0809/c1648a157596/page.psp',
       },
       {
-        title: '海南师范大学举办海南省大中小学思政课一体化建设研讨会',
+        title: '全国思政课战线集体备课会在海口举行',
         source: '海南师范大学',
-        date: '2025-03-03',
-        url: 'https://www.hainnu.edu.cn/info/1021/61927.htm',
+        date: '2025-12-27',
+        url: 'https://webplus.hainnu.edu.cn/_s3/2025/1227/c1648a162320/page.psp',
       },
     ],
   },
 ]
+
+const ALLIANCE_SCHOOLS: AllianceSchoolEntry[] = [
+  {
+    name: '海南师范大学',
+    role: '北部联盟牵头高校',
+    logo: allianceHainnuLogo,
+    logoSource: 'https://www.hainnu.edu.cn/_upload/tpl/00/11/17/template17/images/logo.svg',
+    site: 'https://www.hainnu.edu.cn/',
+  },
+  {
+    name: '海南大学',
+    role: '西部联盟牵头高校',
+    logo: allianceHainanuLogo,
+    logoSource: 'https://mks.hainanu.edu.cn/dfiles/16222/home2021/imgs/logom2022.png',
+    site: 'https://www.hainanu.edu.cn/',
+  },
+  {
+    name: '海南热带海洋学院',
+    role: '南部联盟牵头高校',
+    logo: allianceHntouLogo,
+    logoSource: 'https://www.hntou.edu.cn/images/logo.png',
+    site: 'https://www.hntou.edu.cn/',
+  },
+  {
+    name: '琼台师范学院',
+    role: '东部联盟牵头高校',
+    logo: allianceQtnuLogo,
+    logoSource: 'https://www.qtnu.edu.cn/images/logo0801.png',
+    site: 'https://www.qtnu.edu.cn/',
+  },
+]
+
+const ALLIANCE_MILESTONES: AllianceMilestone[] = [
+  {
+    title: '目标同频',
+    node: '省厅统筹 + 片区联动',
+    desc: '以省级统筹目标为牵引，将课程目标、教研计划、实践任务分层落实到四大片区。',
+  },
+  {
+    title: '教研同题',
+    node: '同题异构 + 集体备课',
+    desc: '围绕关键主题常态化开展跨学段同题异构、联合磨课与成果复盘，形成可复用教研模板。',
+  },
+  {
+    title: '资源同享',
+    node: '资源沉淀 + 评价闭环',
+    desc: '按栏目沉淀优质课例与实践案例，配套咨询入口与反馈机制，推动联盟成果持续迭代。',
+  },
+]
+
+const ALLIANCE_ACTIONS: AllianceActionEntry[] = [
+  {
+    title: '政策对标清单',
+    detail: '先对齐教育部一体化建设要求，再映射到省级与片区执行任务，避免方向偏移。',
+    actionLabel: '查看政策依据',
+    url: 'https://www.moe.gov.cn/srcsite/A13/moe_772/202301/t20230109_1038750.html',
+  },
+  {
+    title: '片区教研联动',
+    detail: '以牵头高校为节点，按北部/西部/南部/东部片区推进同题异构、赛课与集备协同。',
+    actionLabel: '查看片区动态',
+    url: 'https://webplus.hainnu.edu.cn/_s3/2025/0809/c1648a157596/page.psp',
+  },
+  {
+    title: '实践育人协同',
+    detail: '将课堂教学、基地实践和社会议题结合，打通“课程-活动-评价”一体化链路。',
+    actionLabel: '查看实践案例',
+    url: 'https://www.hntou.edu.cn/xwzx/xxyw/202505/t20250510_95835.html',
+  },
+]
+
+const ALLIANCE_UPLOAD_RESULT_TYPES = [
+  '会议记录',
+  '教案课件',
+  '课堂实录',
+  '说课评课',
+  '集体备课纪要',
+  '跨学段衔接案例',
+] as const
+
+const ALLIANCE_UPLOAD_TYPE_MAP: Record<(typeof ALLIANCE_UPLOAD_RESULT_TYPES)[number], string> = {
+  会议记录: 'document',
+  教案课件: 'document',
+  课堂实录: 'video',
+  说课评课: 'video',
+  集体备课纪要: 'document',
+  跨学段衔接案例: 'multimedia',
+}
 
 interface Material {
   id: number; title: string; type: string; stage: string[]; tags: { topic: string[]; emotion: string[]; knowledge: string[] }; desc: string
@@ -674,6 +847,23 @@ function Splash({
         <h1 className="splash-title">AI赋能<br/><span className="splash-title-accent">创新思政</span></h1>
         <p className="splash-sub">智慧资源 · 因材施教 · 全学段覆盖</p>
         <div className="splash-mode-chip">{guestMode ? '当前模式：游客模式（全学段）' : `当前学段：${selectedStage}`}</div>
+        <div className="splash-school-ribbon" aria-label="联盟学校校徽">
+          {ALLIANCE_SCHOOLS.map((school) => (
+            <a
+              key={`splash-${school.name}`}
+              className="splash-school-chip"
+              href={school.site}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={school.name}
+            >
+              <span className="splash-school-logo-wrap">
+                <img className="splash-school-logo" src={school.logo} alt={`${school.name}校徽`} loading="lazy" />
+              </span>
+              <span>{school.name}</span>
+            </a>
+          ))}
+        </div>
         <div className="splash-stats">
           <div className="splash-stat"><div className="ss-num">{DATA.length}</div><div className="ss-label">思政素材</div></div>
           <div className="splash-divider" />
@@ -703,38 +893,44 @@ function Splash({
 
 
 // ── 上传素材 Modal ──────────────────────────────────────────────
-function UploadModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Material) => void }) {
-  const [title, setTitle] = useState('')
-  const [type, setType] = useState('document')
+function UploadModal({ scene, onClose, onAdd }: { scene: UploadScene; onClose: () => void; onAdd: (m: Material) => void }) {
+  const allianceScene = scene === 'alliance_same_class'
+  const [title, setTitle] = useState(allianceScene ? '【同课异构】' : '')
+  const [type, setType] = useState(allianceScene ? 'document' : 'document')
   const [period, setPeriod] = useState('现当代')
   const [province, setProvince] = useState('海南省')
-  const [stage, setStage] = useState<string[]>(['高中'])
-  const [topicStr, setTopicStr] = useState('')
+  const [stage, setStage] = useState<string[]>(allianceScene ? [...STAGE_OPTIONS] : ['高中'])
+  const [topicStr, setTopicStr] = useState(allianceScene ? '同课异构 思政课一体化 区域联盟' : '')
   const [emotionStr, setEmotionStr] = useState('')
   const [knowledgeStr, setKnowledgeStr] = useState('')
-  const [desc, setDesc] = useState('')
+  const [desc, setDesc] = useState(allianceScene ? '用于上传大中小学思政课“同课异构”成果（会议记录、教案课件、课堂实录等）。' : '')
   const [contentDetail, setContentDetail] = useState('')
-  const [source, setSource] = useState('')
+  const [source, setSource] = useState(allianceScene ? '区域联盟共建上传' : '')
   const [annotation, setAnnotation] = useState('')
+  const [allianceResultType, setAllianceResultType] = useState<(typeof ALLIANCE_UPLOAD_RESULT_TYPES)[number]>('会议记录')
   const [saved, setSaved] = useState(false)
 
   const toggleStage = (s: string) => setStage(prev => prev.includes(s) ? prev.filter(x=>x!==s) : [...prev, s])
 
   const handleSubmit = () => {
     if(!title.trim()) { alert('请填写标题'); return }
+    const topicTags = topicStr.split(/[，,\s]+/).filter(Boolean)
+    if (allianceScene) {
+      topicTags.push('同课异构', '思政课一体化', '区域联盟', allianceResultType)
+    }
     const newMat: Material = {
       id: Date.now(),
       title: title.trim(),
       type,
       stage: stage.length ? stage : ['高中'],
       tags: {
-        topic: topicStr.split(/[，,\s]+/).filter(Boolean),
+        topic: Array.from(new Set(topicTags)),
         emotion: emotionStr.split(/[，,\s]+/).filter(Boolean),
         knowledge: knowledgeStr.split(/[，,\s]+/).filter(Boolean),
       },
-      desc: desc.trim() || title.trim(),
-      source: source.trim() || '自主上传',
-      sourceName: source.trim() || '用户上传',
+      desc: desc.trim() || (allianceScene ? `大中小学思政课“同课异构”${allianceResultType}成果。` : title.trim()),
+      source: source.trim() || (allianceScene ? '区域联盟共建上传' : '自主上传'),
+      sourceName: source.trim() || (allianceScene ? '区域联盟上传' : '用户上传'),
       date: new Date().toISOString().slice(0,10),
       views: 0,
       annotation: annotation.trim() || '暂无教学建议，请点击上方「重新生成」获取AI辅助教学方案',
@@ -770,12 +966,43 @@ function UploadModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: Mater
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box upload-modal" onClick={e=>e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <h2 className="modal-title" style={{fontSize:'18px'}}>📤 上传新素材</h2>
+        <h2 className="modal-title" style={{fontSize:'18px'}}>
+          {allianceScene ? '📤 上传大中小学思政课“同课异构”成果' : '📤 上传新素材'}
+        </h2>
+        {allianceScene && (
+          <div className="upload-scene-tip">
+            当前为区域联盟专用入口，请上传同课异构成果，如会议记录、教案课件、课堂实录等。
+          </div>
+        )}
         <div className="upload-form">
           <div className="uf-row">
             <label className="uf-label">素材标题 <span style={{color:'#dc2626'}}>*</span></label>
-            <input className="uf-input" placeholder="如：琼崖革命精神与海南经济社会发展" value={title} onChange={e=>setTitle(e.target.value)} />
+            <input
+              className="uf-input"
+              placeholder={allianceScene ? '如：【同课异构】“诚信”主题跨学段教学设计与课堂实录' : '如：琼崖革命精神与海南经济社会发展'}
+              value={title}
+              onChange={e=>setTitle(e.target.value)}
+            />
           </div>
+          {allianceScene && (
+            <div className="uf-row">
+              <label className="uf-label">同课异构成果类别</label>
+              <div className="uf-radio-row">
+                {ALLIANCE_UPLOAD_RESULT_TYPES.map((item) => (
+                  <label
+                    key={item}
+                    className={`uf-radio${allianceResultType===item?' active':''}`}
+                    onClick={() => {
+                      setAllianceResultType(item)
+                      setType(ALLIANCE_UPLOAD_TYPE_MAP[item] || 'document')
+                    }}
+                  >
+                    {item}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="uf-row">
             <label className="uf-label">素材类型</label>
             <div className="uf-radio-row">
@@ -890,6 +1117,7 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
   )
   const [lastPopupPrompt, setLastPopupPrompt] = useState('')
   const [lastPopupDiscipline, setLastPopupDiscipline] = useState('')
+  const [aiActionMessage, setAiActionMessage] = useState('')
 
   const loadAI = useCallback(async () => {
     setGenerating(true); setAiText('')
@@ -913,7 +1141,7 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
     const popupKnowledge = (m.tags?.knowledge || []).slice(0, 2).join('、') || '课程核心任务'
     const popupDiscipline = `弹窗AI辅助 · ${disciplineLabel}`
     const url = `/deepseek.html?title=${encodeURIComponent(m.title)}&desc=${encodeURIComponent(m.desc)}&knowledge=${encodeURIComponent(popupKnowledge)}&discipline=${encodeURIComponent(popupDiscipline)}&prompt=${encodeURIComponent(prompt)}`
-    window.open(url, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
     const historyItem: PopupAIHistoryItem = {
       id: Date.now(),
       createdAt: new Date().toLocaleString('zh-CN', { hour12: false }),
@@ -959,6 +1187,61 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
   const popupHelperNote = isCorePopup
     ? '提示词将自动复制到剪贴板，打开页面后可直接发送并继续做素养深化。'
     : '提示词将自动复制到剪贴板，打开页面后可直接发送并继续细化教材教学模式。'
+  const knowledgeText = (m.tags?.knowledge || []).join('、')
+  const currentPlanText = aiText || m.annotation || '暂无教学建议'
+  const deepSeekPrompt = useMemo(() => `请你扮演一位资深思政教育专家。请为以下思政课素材优化或扩展一份更完整的AI辅助教学方案：
+
+【素材标题】${m.title}
+【内容简介】${m.desc}
+【知识点】${knowledgeText || '暂无'}
+【现有教学建议】${currentPlanText}
+
+请以此为基础，生成一份更详细、更专业的思政课AI辅助教学方案，包括：教学目标、教学重难点、教学过程设计（含导入、新授、巩固练习环节）、板书设计、作业布置、教学反思等完整环节。格式清晰，分模块详细阐述，适合中小学思政课教师直接使用。`, [m.title, m.desc, knowledgeText, currentPlanText])
+
+  const setAiToast = useCallback((message: string) => {
+    setAiActionMessage(message)
+    window.setTimeout(() => setAiActionMessage(''), 2200)
+  }, [])
+
+  const copyText = useCallback(async (text: string, successMessage: string) => {
+    const payload = text.trim()
+    if (!payload) {
+      setAiToast('暂无可复制内容')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(payload)
+      setAiToast(successMessage)
+      return
+    } catch {
+      // fallback for restricted clipboard environments
+      const textarea = document.createElement('textarea')
+      textarea.value = payload
+      textarea.setAttribute('readonly', 'true')
+      textarea.style.position = 'fixed'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.select()
+      const copied = document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setAiToast(copied ? successMessage : '复制失败，请手动复制')
+    }
+  }, [setAiToast])
+
+  const openMainDeepSeek = useCallback(() => {
+    const url = `/deepseek.html?title=${encodeURIComponent(m.title)}&desc=${encodeURIComponent(m.desc)}&knowledge=${encodeURIComponent(knowledgeText)}&discipline=${encodeURIComponent('AI教学方案优化')}&prompt=${encodeURIComponent(deepSeekPrompt)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }, [m.title, m.desc, knowledgeText, deepSeekPrompt])
+
+  const copyPlan = useCallback(() => {
+    void copyText(currentPlanText, '方案已复制，可直接粘贴到教案中')
+  }, [copyText, currentPlanText])
+
+  const copyPrompt = useCallback(() => {
+    void copyText(deepSeekPrompt, '提示词已复制，去 DeepSeek 可直接发送')
+  }, [copyText, deepSeekPrompt])
+
+  const planCharCount = currentPlanText.replace(/\s+/g, '').length
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -993,17 +1276,27 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
           </div>
           {generating ? (
             <div className="ai-spinner"><svg viewBox="0 0 50 50" width="36" height="36"><circle cx="25" cy="25" r="20" fill="none" stroke="#b91c1c" strokeWidth="4" strokeDasharray="80 40" strokeLinecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg><span>🧠 AI 生成中...</span></div>
-          ) : <div className="ai-plan" data-live={isLive}>{aiText || m.annotation}</div>}
+          ) : <div className="ai-plan" data-live={isLive}>{currentPlanText}</div>}
+          <div className="ai-meta-row">
+            <span className="ai-meta-chip">{isLive ? '实时生成' : '预存方案'}</span>
+            <span className="ai-meta-chip">约 {planCharCount} 字</span>
+            <span className="ai-meta-chip">学段：{(m.stage || []).join(' / ') || '全学段'}</span>
+          </div>
           <div className="copy-hint">💡 提示：点击下方「→ DeepSeek 优化教学方案」按钮，跳转页面已自动复制提示词，打开 DeepSeek 对话框后直接粘贴发送即可获得完整教学方案</div>
-          <div style={{display:'flex',gap:'10px',flexWrap:'wrap',marginTop:'10px'}}>
+          <div className="ai-actions">
             <button className="regen-btn" onClick={e => { e.stopPropagation(); setRegenKey(k => k+1) }}>🔄 重新生成</button>
+            <button className="regen-btn ai-copy-btn" onClick={e => { e.stopPropagation(); copyPlan() }}>📄 复制方案</button>
+            <button className="regen-btn ai-copy-btn" onClick={e => { e.stopPropagation(); copyPrompt() }}>🧩 复制提示词</button>
             <button className="regen-btn deepseek-btn" onClick={e => {
               e.stopPropagation()
-              const prompt = `请你扮演一位资深思政教育专家。请为以下思政课素材优化或扩展一份更完整的AI辅助教学方案：\n\n【素材标题】${m.title}\n【内容简介】${m.desc}\n【知识点】${(m.tags?.knowledge||[]).join('、')}\n【现有教学建议】${aiText || m.annotation}\n\n请以此为基础，生成一份更详细、更专业的思政课AI辅助教学方案，包括：教学目标、教学重难点、教学过程设计（含导入、新授、巩固练习环节）、板书设计、作业布置、教学反思等完整环节。格式清晰，分模块详细阐述，适合中小学思政课教师直接使用。`
-              const url = `/deepseek.html?title=${encodeURIComponent(m.title)}&desc=${encodeURIComponent(m.desc)}&knowledge=${encodeURIComponent((m.tags?.knowledge||[]).join('、'))}&discipline=${encodeURIComponent('AI教学方案优化')}&prompt=${encodeURIComponent(prompt)}`
-              window.open(url, '_blank')
+              openMainDeepSeek()
             }}>🔗 → DeepSeek 优化教学方案</button>
           </div>
+          {aiActionMessage && <div className="ai-action-status">{aiActionMessage}</div>}
+          <details className="ai-prompt-details">
+            <summary>查看将发送到 DeepSeek 的提示词</summary>
+            <pre>{deepSeekPrompt}</pre>
+          </details>
         </div>
         {coreLiteracy.length > 0 && (
           <div className="modal-section"><h3>🎯 政治学科核心素养</h3>
@@ -1070,7 +1363,7 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
                         style={{ background: d.bg, borderColor: d.border, color: d.color }}
                         onClick={() => {
                           const url = `/deepseek.html?title=${encodeURIComponent(m.title)}&desc=${encodeURIComponent(m.desc)}&knowledge=${encodeURIComponent(k)}&discipline=${encodeURIComponent(d.name)}&prompt=${encodeURIComponent(d.prompt)}`
-                          window.open(url, '_blank')
+                          window.open(url, '_blank', 'noopener,noreferrer')
                         }}>
                         <span>{d.icon}</span>
                         <span>{d.name}</span>
@@ -1277,6 +1570,7 @@ export default function App() {
   const [topic, setTopic] = useState(() => typeof initialFilters.topic === 'string' ? initialFilters.topic : '')
   const [selected, setSelected] = useState<Material|null>(null)
   const [showUpload, setShowUpload] = useState(false)
+  const [uploadScene, setUploadScene] = useState<UploadScene>('general')
   const [showShare, setShowShare] = useState(false)
   const [uploadedMats, setUploadedMats] = useState<Material[]>(() => {
     try { return JSON.parse(localStorage.getItem('uploaded_materials')||'[]') } catch { return [] }
@@ -1366,6 +1660,21 @@ export default function App() {
       return matchSelectedStage && matchQ && matchS && matchT && matchTopic && matchPv && matchRg
     })
   }, [uploadedMats, q, st, tp, pv, rg, topic, ftzMode, allianceMode, guestMode, selectedStage])
+  const allianceStageCoverage = useMemo(() => {
+    const covered = new Set<string>()
+    list.forEach((material) => {
+      ;(material.stage || []).forEach((stage) => {
+        if ((STAGE_OPTIONS as readonly string[]).includes(stage)) {
+          covered.add(stage)
+        }
+      })
+    })
+    return covered.size
+  }, [list])
+  const allianceUploadedCount = useMemo(
+    () => uploadedMats.filter(isAllianceMaterial).length,
+    [uploadedMats]
+  )
 
   const paginated = useMemo(() => list.slice(0, page * PAGE_SIZE), [list, page])
   const hasMore = paginated.length < list.length
@@ -1379,6 +1688,27 @@ export default function App() {
     ;(m.stage||[]).forEach((s:string) => stageCount[s]=(stageCount[s]||0)+1)
   })
   const topTopics = Object.entries(topicCount).sort((a,b)=>b[1]-a[1]).slice(0,12)
+  const provinceDistribution = useMemo(() => {
+    const provinceCount: Record<string, number> = {}
+    list.forEach((material) => {
+      const provinceName = material.province || '全国'
+      provinceCount[provinceName] = (provinceCount[provinceName] || 0) + 1
+    })
+    const top10 = Object.entries(provinceCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count], index) => ({
+        name,
+        count,
+        rank: index + 1,
+        percent: list.length > 0 ? Math.round((count / list.length) * 100) : 0,
+      }))
+    return {
+      top10,
+      coveredProvinceCount: Object.keys(provinceCount).length,
+      selectedCount: pv ? provinceCount[pv] || 0 : 0,
+    }
+  }, [list, pv])
   const apiStatusLabel = apiStatus === 'online' ? 'API 在线' : apiStatus === 'offline' ? 'API 离线' : 'API 检查中'
   const showReset = Boolean(q || tp || pv || rg || topic || (guestMode && st))
   const handleLuckyPick = useCallback(() => {
@@ -1461,7 +1791,21 @@ export default function App() {
   return (
     <div className={`app${ftzMode ? ' app-ftz' : ''}${allianceMode ? ' app-alliance' : ''}`}>
       {selected && <DetailModal m={selected} onClose={()=>setSelected(null)} />}
-      {showUpload && <UploadModal onClose={()=>setShowUpload(false)} onAdd={(m)=>{setUploadedMats(prev=>[...prev,m]);setShowUpload(false);setEntered(true)}} />}
+      {showUpload && (
+        <UploadModal
+          scene={uploadScene}
+          onClose={() => {
+            setShowUpload(false)
+            setUploadScene('general')
+          }}
+          onAdd={(m)=>{
+            setUploadedMats(prev=>[...prev,m])
+            setShowUpload(false)
+            setUploadScene('general')
+            setEntered(true)
+          }}
+        />
+      )}
       {showShare && <ShareBoardModal onClose={()=>setShowShare(false)} />}
 
       {/* Top bar */}
@@ -1471,13 +1815,35 @@ export default function App() {
           <span className="topbar-name">{sectionTitle}</span>
           <span className="entry-mode-pill">{guestMode ? '游客模式' : `学段：${selectedStage}`}</span>
         </div>
+        <div className="topbar-emblem-strip" aria-label="联盟学校校徽导航">
+          {ALLIANCE_SCHOOLS.map((school) => (
+            <a
+              key={`topbar-${school.name}`}
+              className="topbar-emblem-item"
+              href={school.site}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={school.name}
+            >
+              <img className="topbar-emblem-logo" src={school.logo} alt={`${school.name}校徽`} loading="lazy" />
+            </a>
+          ))}
+        </div>
         <div className="topbar-tools">
           <button className="topbar-lucky-btn" onClick={handleLuckyPick} disabled={list.length === 0}>🎲 随机一条</button>
           <span className={`api-pill ${apiStatus}`}>{apiStatusLabel}</span>
         </div>
         <button className="topbar-back" onClick={() => { setEntered(false); setFtzMode(false); setAllianceMode(false) }}>← 返回首页</button>
         <button className="topbar-mode-btn" onClick={() => { setStageConfirmed(false); setEntered(false); setFtzMode(false); setAllianceMode(false) }}>切换学段/模式</button>
-        <button className="topbar-upload-btn" onClick={() => setShowUpload(true)}>📤 上传素材</button>
+        <button
+          className="topbar-upload-btn"
+          onClick={() => {
+            setUploadScene(allianceMode ? 'alliance_same_class' : 'general')
+            setShowUpload(true)
+          }}
+        >
+          📤 上传素材
+        </button>
         <button className="topbar-share-btn" onClick={() => setShowShare(true)}>💬 经验分享</button>
         <button
           className={`topbar-ftz-btn${ftzMode ? ' is-active' : ''}`}
@@ -1506,6 +1872,23 @@ export default function App() {
           {allianceMode ? '🏠 返回资源库' : `🤝 区域联盟专题(${allianceCount})`}
         </button>
       </div>
+      <div className="global-school-ribbon" aria-label="联盟学校校徽（常显）">
+        {ALLIANCE_SCHOOLS.map((school) => (
+          <a
+            key={`global-ribbon-${school.name}`}
+            className="global-school-chip"
+            href={school.site}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={school.name}
+          >
+            <span className="global-school-logo-wrap">
+              <img className="global-school-logo" src={school.logo} alt={`${school.name}校徽`} loading="lazy" />
+            </span>
+            <span>{school.name}</span>
+          </a>
+        ))}
+      </div>
 
       {/* FTZ Banner */}
       {ftzMode && (
@@ -1529,17 +1912,69 @@ export default function App() {
             <div className="alliance-banner-left">
               <div className="alliance-banner-title">🤝 海南省大中小学思政课一体化建设区域联盟专题</div>
               <div className="alliance-banner-sub">课程共建 · 教研共研 · 学段衔接 · 资源共享 · 协同育人</div>
+              <div className="alliance-banner-emblems" aria-label="区域联盟学校">
+                {ALLIANCE_SCHOOLS.map((school) => (
+                  <a
+                    key={`banner-${school.name}`}
+                    className="alliance-banner-emblem"
+                    href={school.site}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={school.name}
+                  >
+                    <img src={school.logo} alt={`${school.name}校徽`} loading="lazy" />
+                    <span>{school.name}</span>
+                  </a>
+                ))}
+              </div>
             </div>
             <div className="alliance-banner-right">
               <div className="alliance-stat"><div className="alliance-stat-num">{list.length}</div><div className="alliance-stat-lbl">专题素材</div></div>
-              <div className="alliance-stat"><div className="alliance-stat-num">4</div><div className="alliance-stat-lbl">学段贯通</div></div>
-              <div className="alliance-stat"><div className="alliance-stat-num">1</div><div className="alliance-stat-lbl">区域联盟</div></div>
+              <div className="alliance-stat"><div className="alliance-stat-num">{ALLIANCE_SCHOOLS.length}</div><div className="alliance-stat-lbl">牵头高校</div></div>
+              <div className="alliance-stat"><div className="alliance-stat-num">{allianceStageCoverage}/4</div><div className="alliance-stat-lbl">学段贯通</div></div>
             </div>
           </div>
         </div>
       )}
       {allianceMode && (
         <section className="alliance-hub">
+          <div className="alliance-overview-grid">
+            <div className="alliance-overview-panel">
+              <div className="alliance-overview-title">🚀 一体化建设推进看板</div>
+              <div className="alliance-metric-grid">
+                <div className="alliance-metric-card">
+                  <div className="alliance-metric-num">{ALLIANCE_OFFICIAL_RESOURCES.length}</div>
+                  <div className="alliance-metric-label">已验链官方资源</div>
+                </div>
+                <div className="alliance-metric-card">
+                  <div className="alliance-metric-num">{ALLIANCE_CONTENT_COLUMNS.length}</div>
+                  <div className="alliance-metric-label">共建内容栏目</div>
+                </div>
+                <div className="alliance-metric-card">
+                  <div className="alliance-metric-num">{allianceUploadedCount}</div>
+                  <div className="alliance-metric-label">联盟上传资源</div>
+                </div>
+                <div className="alliance-metric-card">
+                  <div className="alliance-metric-num">{ALLIANCE_CONSULT_CHANNELS.length}</div>
+                  <div className="alliance-metric-label">咨询对接入口</div>
+                </div>
+              </div>
+            </div>
+            <div className="alliance-overview-panel alliance-overview-roadmap">
+              <div className="alliance-overview-title">🧩 联盟协同路径</div>
+              <div className="alliance-milestone-list">
+                {ALLIANCE_MILESTONES.map((step) => (
+                  <article key={step.title} className="alliance-milestone-item">
+                    <div className="alliance-milestone-head">
+                      <span className="alliance-milestone-title">{step.title}</span>
+                      <span className="alliance-milestone-node">{step.node}</span>
+                    </div>
+                    <p className="alliance-milestone-desc">{step.desc}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="alliance-hub-inner">
             <div className="alliance-upload-hero">
               <div className="alliance-upload-kicker">联盟共建入口</div>
@@ -1547,12 +1982,53 @@ export default function App() {
               <p>
                 欢迎上传课堂实录、同题异构教案、跨学段衔接案例、实践育人素材。提交后会进入“我的上传资源”并参与联盟共建。
               </p>
-              <button className="alliance-upload-hero-btn" onClick={() => setShowUpload(true)}>
+              <button
+                className="alliance-upload-hero-btn"
+                onClick={() => {
+                  setUploadScene('alliance_same_class')
+                  setShowUpload(true)
+                }}
+              >
                 立即上传联盟资源
               </button>
             </div>
             <div className="alliance-resource-board">
-              <div className="alliance-board-title">📚 海南省思政课一体化联盟官方资源</div>
+              <div className="alliance-library-intro">
+                <div className="alliance-library-kicker">区域联盟介绍</div>
+                <h3 className="alliance-library-title">海南省大中小学思政课一体化建设区域联盟</h3>
+                <p className="alliance-library-desc">
+                  联盟以“纵向贯通、横向协同、资源共享、协同育人”为核心目标，围绕课程共建、教研共研、实践共育持续开展区域联动，
+                  构建大中小学思政课一体化建设的海南样板。
+                </p>
+                <div className="alliance-library-chip-list">
+                  {ALLIANCE_INTRO_REGION_NODES.map((node) => (
+                    <span key={node} className="alliance-library-chip">{node}</span>
+                  ))}
+                </div>
+                <ul className="alliance-library-bullets">
+                  {ALLIANCE_INTRO_HIGHLIGHTS.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+                <div className="alliance-action-grid">
+                  {ALLIANCE_ACTIONS.map((item) => (
+                    <a
+                      key={item.title}
+                      className="alliance-action-card"
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <div className="alliance-action-title">{item.title}</div>
+                      <p className="alliance-action-detail">{item.detail}</p>
+                      <span className="alliance-action-link">{item.actionLabel} ↗</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div className="alliance-board-title">
+                📚 海南省思政课一体化联盟官方资源（已验链 {ALLIANCE_OFFICIAL_RESOURCES.length} 条）
+              </div>
               <div className="alliance-resource-layout">
                 <div className="alliance-content-column">
                   <div className="alliance-content-column-title">🗂 联盟资源内容栏</div>
@@ -1579,7 +2055,13 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <button className="alliance-content-upload-btn" onClick={() => setShowUpload(true)}>
+                  <button
+                    className="alliance-content-upload-btn"
+                    onClick={() => {
+                      setUploadScene('alliance_same_class')
+                      setShowUpload(true)
+                    }}
+                  >
                     按栏目上传资源
                   </button>
                 </div>
@@ -1613,7 +2095,7 @@ export default function App() {
               ))}
             </div>
             <p className="alliance-consult-note">
-              注：以上入口均来自教育部、海南省教育系统及高校官方公开页面；请以对应网站最新公告为准。
+              注：以上入口均来自教育部、海南省教育系统及高校官方公开页面，并已完成当前版本验链；请以对应网站最新公告为准。
             </p>
           </div>
         </section>
@@ -1771,37 +2253,73 @@ export default function App() {
           </div>
           {!ftzMode && !allianceMode && (
             <div className="s-card">
-              <div className="s-title">🗺️ 省份分布 TOP10</div>
-              {Object.entries(Object.entries(list.reduce((acc,m)=>{const p=m.province||'全国';acc[p]=(acc[p]||0)+1;return acc},{} as Record<string,number>)).sort((a,b)=>b[1]-a[1]).slice(0,10)).map(([p,c])=>{
-                const p4=list.length>0?Math.round(Number(c)/list.length*100):0
-                return (
+              <div className="s-title-row">
+                <div className="s-title">🗺️ 省份分布 TOP10</div>
+                <span className="s-title-meta">覆盖 {provinceDistribution.coveredProvinceCount}</span>
+              </div>
+              <div className="province-window-tip">
+                {pv ? `已筛选：${pv}（${provinceDistribution.selectedCount}）` : '点击省份可快速筛选'}
+              </div>
+              {provinceDistribution.top10.length === 0 ? (
+                <div className="province-window-empty">暂无省份数据</div>
+              ) : provinceDistribution.top10.map(({ name, count, rank, percent }) => (
                   <button
-                    key={p}
+                    key={name}
                     type="button"
-                    className={`s-bar-row${pv===p?' is-active':''}`}
-                    onClick={() => { setPv(pv===p ? '' : p); setRg(''); setPage(1) }}
-                    aria-pressed={pv===p}
+                    className={`s-bar-row s-bar-row-province${pv===name?' is-active':''}`}
+                    onClick={() => { setPv(pv===name ? '' : name); setRg(''); setPage(1) }}
+                    aria-pressed={pv===name}
+                    title={`${name}：${count} 条，占比 ${percent}%`}
                   >
-                    <span className="s-bar-label" style={{fontSize:11}}>{p}</span>
-                    <div className="s-bar"><div style={{height:'100%',width:p4+'%',background:'#dc2626',borderRadius:4}}/></div>
-                    <span className="s-bar-cnt">{c}</span>
+                    <span className="s-rank-badge">{rank}</span>
+                    <span className="s-bar-label s-bar-label-province">{name}</span>
+                    <div className="s-bar s-bar-province">
+                      <div className="s-fill s-fill-province" style={{width:percent+'%'}}/>
+                    </div>
+                    <span className="s-bar-cnt">{count}</span>
+                    <span className="s-bar-pct">{percent}%</span>
                   </button>
                 )
-              })}
+              )}
             </div>
           )}
         </div>
       </div>
 
       <footer className="footer">
-        <div className="footer-logo">🏝️</div>
-        <div>
-          <div className="footer-title">{sectionTitle}</div>
-          <div className="footer-sub">© 2026 思政教育智慧平台 · Powered by MiniMax AI · 海南自由贸易港</div>
+        <div className="footer-content">
+          <div className="footer-main">
+            <div className="footer-logo">🏝️</div>
+            <div>
+              <div className="footer-title">{sectionTitle}</div>
+              <div className="footer-sub">© 2026 思政教育智慧平台 · Powered by MiniMax AI · 海南自由贸易港</div>
+            </div>
+          </div>
+          <div className="footer-school-wall">
+            {ALLIANCE_SCHOOLS.map((school) => (
+              <a
+                key={`footer-${school.name}`}
+                className="footer-school-item"
+                href={school.site}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={school.name}
+              >
+                <img className="footer-school-logo" src={school.logo} alt={`${school.name}校徽`} loading="lazy" />
+                <span>{school.name}</span>
+              </a>
+            ))}
+          </div>
         </div>
       </footer>
       {allianceMode && (
-        <button className="alliance-float-upload-btn" onClick={() => setShowUpload(true)}>
+        <button
+          className="alliance-float-upload-btn"
+          onClick={() => {
+            setUploadScene('alliance_same_class')
+            setShowUpload(true)
+          }}
+        >
           📤 上传联盟资源
         </button>
       )}

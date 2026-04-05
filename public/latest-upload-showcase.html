@@ -1,0 +1,261 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>琼雅思政·新版功能导览</title>
+    <style>
+      :root {
+        --bg: #f5f1e8;
+        --ink: #1f2a44;
+        --paper: #fffdf8;
+        --accent: #d9480f;
+        --accent-soft: #ffe2d4;
+        --teal: #0f766e;
+        --teal-soft: #d7f8f4;
+        --line: #e9dbc8;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Noto Serif SC", "Source Han Serif SC", "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1000px 480px at 90% -80px, #ffe7c9 0%, transparent 60%),
+          radial-gradient(700px 360px at -10% 18%, #d7f8f4 0%, transparent 55%),
+          var(--bg);
+      }
+
+      .wrap {
+        width: min(1100px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 44px;
+      }
+
+      .hero {
+        background: linear-gradient(130deg, #fff9ef 0%, #fff4eb 52%, #eefaf7 100%);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 26px;
+        box-shadow: 0 14px 40px rgba(32, 40, 58, 0.08);
+      }
+
+      .kicker {
+        display: inline-block;
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--teal);
+        background: var(--teal-soft);
+        border-radius: 999px;
+        padding: 6px 12px;
+      }
+
+      h1 {
+        margin: 12px 0 8px;
+        font-size: clamp(1.45rem, 2.8vw, 2.4rem);
+        line-height: 1.22;
+      }
+
+      .lead {
+        margin: 0;
+        font-size: 1rem;
+        color: #3b4b68;
+        max-width: 760px;
+      }
+
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .btn {
+        text-decoration: none;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      .btn:hover { transform: translateY(-1px); }
+
+      .btn-main {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 10px 26px rgba(217, 72, 15, 0.25);
+      }
+
+      .btn-sub {
+        background: var(--paper);
+        border-color: var(--line);
+        color: var(--ink);
+      }
+
+      .grid {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 14px;
+      }
+
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(24, 34, 56, 0.06);
+      }
+
+      .card h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+      }
+
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+      .span-12 { grid-column: span 12; }
+
+      ul { margin: 10px 0 0; padding-left: 18px; }
+      li { margin: 6px 0; }
+
+      .timeline {
+        counter-reset: flow;
+        padding-left: 0;
+        margin: 8px 0 0;
+      }
+
+      .timeline li {
+        list-style: none;
+        position: relative;
+        padding: 10px 10px 10px 46px;
+        border-radius: 12px;
+        background: #fffaf4;
+        border: 1px dashed #efd8c2;
+      }
+
+      .timeline li + li { margin-top: 8px; }
+
+      .timeline li::before {
+        counter-increment: flow;
+        content: counter(flow);
+        position: absolute;
+        left: 12px;
+        top: 10px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #fff;
+        background: var(--teal);
+        font-size: 0.86rem;
+      }
+
+      .tag {
+        display: inline-block;
+        margin: 4px 6px 0 0;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #7c2d12;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+
+      .foot {
+        margin-top: 18px;
+        font-size: 0.9rem;
+        color: #6a7488;
+      }
+
+      @media (max-width: 860px) {
+        .span-6, .span-4, .span-12 { grid-column: span 12; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <span class="kicker">Latest Upload Snapshot</span>
+        <h1>琼雅思政·上次上传版本导览页</h1>
+        <p class="lead">
+          这个页面依据你上次上传到仓库的版本整理，快速展示新版网站的核心结构、交互亮点和课堂落地方向，便于演示与说明。
+        </p>
+        <div class="actions">
+          <a class="btn btn-main" href="/" target="_blank" rel="noopener noreferrer">打开主站首页</a>
+          <a class="btn btn-sub" href="/deepseek.html" target="_blank" rel="noopener noreferrer">打开 AI 辅助页</a>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card span-6">
+          <h2>入口与模式</h2>
+          <span class="tag">学段选择优先</span>
+          <span class="tag">游客模式可切换</span>
+          <ul>
+            <li>首屏先选学段：小学、初中、高中、大学。</li>
+            <li>游客模式可跳过画像限制，浏览全学段素材。</li>
+            <li>欢迎页和顶栏均可一键切换当前模式。</li>
+          </ul>
+        </article>
+
+        <article class="card span-6">
+          <h2>资源检索与筛选</h2>
+          <span class="tag">四行筛选布局</span>
+          <span class="tag">本地记忆条件</span>
+          <ul>
+            <li>地区、省份、学段、类型四层筛选清晰分离。</li>
+            <li>支持省份与大区互斥，筛选逻辑更稳定。</li>
+            <li>关键词和筛选条件可本地记忆，回访无需重选。</li>
+          </ul>
+        </article>
+
+        <article class="card span-4">
+          <h2>弹窗工作台</h2>
+          <ul>
+            <li>核心素养与教材条目可点击进入详情弹窗。</li>
+            <li>弹窗支持分主题样式与沉浸式信息层次。</li>
+            <li>移动端下自动调整布局与字号密度。</li>
+          </ul>
+        </article>
+
+        <article class="card span-4">
+          <h2>AI 辅助闭环</h2>
+          <ul>
+            <li>一键生成教学方案，支持方向化提示词。</li>
+            <li>支持二次追问润色，延续上次生成上下文。</li>
+            <li>最近记录可回溯，便于迭代打磨课堂设计。</li>
+          </ul>
+        </article>
+
+        <article class="card span-4">
+          <h2>资源覆盖进展</h2>
+          <ul>
+            <li>地级市资源补齐，实现全国地级市覆盖。</li>
+            <li>历史文化、红色文化、科技创新三类并行。</li>
+            <li>服务跨学段、跨区域思政课协同建设。</li>
+          </ul>
+        </article>
+
+        <article class="card span-12">
+          <h2>课堂落地建议流程</h2>
+          <ol class="timeline">
+            <li>先按学段进入页面，确定本节课的学生画像。</li>
+            <li>通过四行筛选快速锁定本地化素材与案例。</li>
+            <li>进入弹窗查看“素养 + 教材”双视角建议。</li>
+            <li>调用 AI 生成初稿，再用追问按钮做二次迭代。</li>
+            <li>将最终方案沉淀为可复用的教研资源条目。</li>
+          </ol>
+        </article>
+      </section>
+
+      <p class="foot">页面文件：/public/latest-upload-showcase.html</p>
+    </main>
+  </body>
+</html>
