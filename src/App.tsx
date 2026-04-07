@@ -93,7 +93,67 @@ interface AllianceActionEntry {
   url: string
 }
 
+interface FtzScorecardItem {
+  metric: string
+  value: string
+  detail: string
+  source: string
+  sourceLabel: string
+  date: string
+}
+
 type UploadScene = 'general' | 'alliance_same_class'
+
+const FTZ_HUNDRED_DAY_SCORECARD: FtzScorecardItem[] = [
+  {
+    metric: '新增备案外贸企业',
+    value: '7503家',
+    detail: '同比增长 65.7%',
+    source: 'https://www.chinanews.com.cn/cj/2026/03-26/10593215.shtml',
+    sourceLabel: '中国新闻网',
+    date: '2026-03-26',
+  },
+  {
+    metric: '“零关税”享惠主体',
+    value: '11773家',
+    detail: '封关百日累计获批',
+    source: 'https://www.chinanews.com.cn/cj/2026/03-26/10593215.shtml',
+    sourceLabel: '中国新闻网',
+    date: '2026-03-26',
+  },
+  {
+    metric: '“零关税”商品税目',
+    value: '6637项',
+    detail: '税目比例由 21% 提升至 74%',
+    source: 'https://www.chinanews.com.cn/cj/2026/03-26/10593215.shtml',
+    sourceLabel: '中国新闻网',
+    date: '2026-03-26',
+  },
+  {
+    metric: '外贸进出口额',
+    value: '超800亿元',
+    detail: '同比增长 32.9%',
+    source: 'https://www.chinanews.com.cn/cj/2026/03-28/10594235.shtml',
+    sourceLabel: '工人日报（中新网转载）',
+    date: '2026-03-28',
+  },
+  {
+    metric: '进出境旅客',
+    value: '86.1万人次',
+    detail: '其中免签入境 21.7 万人次',
+    source: 'https://www.chinanews.com.cn/cj/2026/03-28/10594235.shtml',
+    sourceLabel: '工人日报（中新网转载）',
+    date: '2026-03-28',
+  },
+  {
+    metric: '离岛免税销售额',
+    value: '156.2亿元',
+    detail: '购物人数 196.84 万人次',
+    source: 'https://www.chinanews.com.cn/cj/2026/03-28/10594235.shtml',
+    sourceLabel: '工人日报（中新网转载）',
+    date: '2026-03-28',
+  },
+]
 
 const ALLIANCE_OFFICIAL_RESOURCES: AllianceResourceEntry[] = [
   {
@@ -1905,6 +1965,33 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+      {ftzMode && (
+        <section className="ftz-scorecard" aria-label="封关百日成绩单">
+          <div className="ftz-scorecard-inner">
+            <div className="ftz-scorecard-head">
+              <div className="ftz-scorecard-kicker">封关百日成绩单</div>
+              <h3>海南自贸港封关运作准备进展（真实可点击）</h3>
+              <p>数据区间：2025-12-18 至 2026-03-25。点击下方卡片可查看对应报道原文。</p>
+            </div>
+            <div className="ftz-scorecard-grid">
+              {FTZ_HUNDRED_DAY_SCORECARD.map((item) => (
+                <a
+                  key={`${item.metric}-${item.value}`}
+                  className="ftz-scorecard-card"
+                  href={item.source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="ftz-scorecard-metric">{item.metric}</span>
+                  <span className="ftz-scorecard-value">{item.value}</span>
+                  <span className="ftz-scorecard-detail">{item.detail}</span>
+                  <span className="ftz-scorecard-meta">{item.sourceLabel} · {item.date} · 点击查看</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
       {allianceMode && (
         <div className="alliance-banner">

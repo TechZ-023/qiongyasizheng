@@ -501,6 +501,23 @@ body{font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-ser
 .alliance-stat-num{color:#bfdbfe}
 .ftz-stat-lbl,.alliance-stat-lbl{font-size:11px;color:rgba(255,255,255,0.76);margin-top:3px}
 
+.ftz-scorecard{padding:18px 32px 12px;background:
+  radial-gradient(circle at 10% 10%,rgba(110,231,183,0.25),transparent 34%),
+  linear-gradient(180deg,#ecfdf5 0%,#f7fff9 72%,#fff 100%);
+  border-bottom:1px solid rgba(16,185,129,0.16)}
+.ftz-scorecard-inner{max-width:1200px;margin:0 auto;border:1px solid rgba(16,185,129,0.26);border-radius:18px;background:linear-gradient(145deg,#052e22,#065f46 45%,#047857);padding:14px;box-shadow:0 18px 36px rgba(5,150,105,0.2)}
+.ftz-scorecard-head{margin-bottom:10px}
+.ftz-scorecard-kicker{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:rgba(167,243,208,0.22);border:1px solid rgba(167,243,208,0.5);font-size:11px;font-weight:800;letter-spacing:0.4px;color:#d1fae5}
+.ftz-scorecard-head h3{margin:8px 0 5px;font-size:20px;line-height:1.3;font-weight:900;color:#f0fdf4}
+.ftz-scorecard-head p{margin:0;font-size:13px;line-height:1.66;color:rgba(236,253,245,0.9)}
+.ftz-scorecard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ftz-scorecard-card{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:14px;border:1px solid rgba(167,243,208,0.36);background:rgba(2,44,34,0.56);text-decoration:none;transition:all 0.18s}
+.ftz-scorecard-card:hover{transform:translateY(-1px);border-color:#6ee7b7;box-shadow:0 10px 22px rgba(4,120,87,0.32);background:rgba(4,60,46,0.72)}
+.ftz-scorecard-metric{font-size:12px;font-weight:800;color:#a7f3d0}
+.ftz-scorecard-value{font-size:28px;font-weight:900;line-height:1;color:#f0fdf4}
+.ftz-scorecard-detail{font-size:12px;color:rgba(209,250,229,0.94)}
+.ftz-scorecard-meta{margin-top:auto;font-size:11px;color:rgba(167,243,208,0.86)}
+
 .topbar-ftz-btn,.topbar-alliance-btn{padding:6px 14px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:20px;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s;white-space:nowrap}
 .topbar-ftz-btn:hover{background:rgba(52,211,153,0.24);border-color:rgba(110,231,183,0.5)}
 .topbar-alliance-btn:hover{background:rgba(96,165,250,0.24);border-color:rgba(147,197,253,0.56)}
@@ -617,6 +634,10 @@ body{font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-ser
   .splash-enter-btn,.splash-ftz-btn,.splash-alliance-btn{min-height:52px;padding:10px 14px;font-size:13px}
   .ftz-banner,.alliance-banner{padding:12px 16px}
   .ftz-banner-inner,.alliance-banner-inner{flex-direction:column;align-items:flex-start;gap:10px}
+  .ftz-scorecard{padding:12px 16px 10px}
+  .ftz-scorecard-inner{padding:12px}
+  .ftz-scorecard-head h3{font-size:17px}
+  .ftz-scorecard-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .alliance-banner-emblems{gap:6px}
   .alliance-banner-emblem span{display:none}
   .ftz-banner-right,.alliance-banner-right{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -633,6 +654,7 @@ body{font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-ser
   .alliance-library-bullets{padding-left:16px}
   .alliance-resource-layout{grid-template-columns:1fr}
   .alliance-resource-grid{grid-template-columns:1fr}
+  .ftz-scorecard-grid{grid-template-columns:1fr}
   .alliance-consult-grid{grid-template-columns:1fr}
   .alliance-float-upload-btn{right:12px;bottom:14px;height:42px;padding:0 14px;font-size:13px}
 }
