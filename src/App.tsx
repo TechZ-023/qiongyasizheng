@@ -10,12 +10,15 @@ import allianceQtnuLogo from './assets/alliance-logos/qtnu-logo.jpg'
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || ''
 const FILTER_STORAGE_KEY = 'qiongya_filters_v1'
 const ENTRY_STORAGE_KEY = 'qiongya_entry_v1'
+const THEME_STORAGE_KEY = 'qiongya_theme_v1'
 const STAGE_OPTIONS = ['小学', '初中', '高中', '大学'] as const
+type StageOption = (typeof STAGE_OPTIONS)[number]
 const DEFAULT_STAGE = STAGE_OPTIONS[2]
 
 const STAGE_CLR: Record<string,string> = { '小学':'#fbbf24','初中':'#f97316','高中':'#ef4444','大学':'#a78bfa' }
 const STAGE_BG:  Record<string,string> = { '小学':'rgba(251,191,36,0.12)','初中':'rgba(249,115,22,0.12)','高中':'rgba(239,68,68,0.12)','大学':'rgba(167,139,250,0.12)' }
 const TICO: Record<string,string> = { document:'📄',image:'🖼',video:'🎬',audio:'🎧',multimedia:'🎭' }
+const TYPE_LABELS: Record<string,string> = { document:'文档',image:'图片',video:'视频',audio:'音频',multimedia:'多媒体' }
 const PERIOD_CLR: Record<string,string> = { '古代史':'#f59e0b','近代史':'#ef4444','现当代':'#22d3ee' }
 
 const ALL_PROVINCES = ['北京市','天津市','河北省','山西省','内蒙古自治区','辽宁省','吉林省','黑龙江省','上海市','江苏省','浙江省','安徽省','福建省','江西省','山东省','河南省','湖北省','湖南省','广东省','广西壮族自治区','海南省','重庆市','四川省','贵州省','云南省','西藏自治区','陕西省','甘肃省','青海省','宁夏回族自治区','新疆维吾尔自治区','香港特别行政区','澳门特别行政区','台湾省']
@@ -566,6 +569,303 @@ interface PopupAIHistoryItem {
 const POPUP_AI_HISTORY_STORAGE_KEY = 'qiongya_popup_ai_history_v1'
 const POPUP_AI_HISTORY_LIMIT = 12
 
+interface EvalDimension {
+  name: string
+  desc: string
+}
+
+interface EvalMethod {
+  title: string
+  scene: string
+  actors: string
+  evidence: string
+  feedback: string
+}
+
+interface EvalStageScheme {
+  stage: StageOption
+  goal: string
+  dimensions: EvalDimension[]
+  evidence: string[]
+  cadence: string
+  evaluationMethods: EvalMethod[]
+}
+
+interface EvalTaskTemplate {
+  id: string
+  title: string
+  summary: string
+  dimension: string
+  actions: string[]
+  output: string
+  recommendedEvidence: string[]
+}
+
+interface EvalRunResult {
+  score: number
+  level: string
+  summary: string
+  tips: string[]
+  timestamp: string
+}
+
+const EVAL_CORE_PRINCIPLES = [
+  {
+    title: '多主体协同',
+    desc: '教师评价、学生自评、同伴互评与家庭反馈共同参与，形成更完整的成长画像。',
+  },
+  {
+    title: '过程性优先',
+    desc: '以课堂表现、任务完成、项目产出等过程证据为核心，不只看一次终结性分数。',
+  },
+  {
+    title: '关注成长',
+    desc: '比较学生从起点到当前水平的变化，突出持续改进和个体进步。',
+  },
+  {
+    title: '反馈可行动',
+    desc: '每一次评价结果都要能转化为教学调整、学生改进和后续任务安排。',
+  },
+]
+
+const EVAL_STAGE_SCHEMES: EvalStageScheme[] = [
+  {
+    stage: STAGE_OPTIONS[0],
+    goal: '通过可观察行为培养学习兴趣、规则习惯和基础公民意识。',
+    dimensions: [
+      { name: '学习参与', desc: '关注度、参与度和表达意愿。' },
+      { name: '合作与规则', desc: '小组协作、倾听分享和班级规则实践。' },
+      { name: '价值启蒙', desc: '日常行动中的责任意识与集体意识。' },
+    ],
+    evidence: ['课堂观察记录', '学习单与作品', '活动照片或视频', '成长档案袋'],
+    cadence: '每周反馈 + 单元小结 + 学期回顾',
+    evaluationMethods: [
+      {
+        title: '课堂星级观察',
+        scene: '适合低中年级课堂讨论、情境表演、规则养成活动。',
+        actors: '教师主评，学生用贴纸或星卡完成自评。',
+        evidence: '观察记录、星级卡、学习单、课堂照片。',
+        feedback: '用一句肯定加一个小目标反馈，避免抽象分数化。',
+      },
+      {
+        title: '成长档案袋',
+        scene: '适合单元主题学习、红色故事绘本、劳动与责任实践。',
+        actors: '学生收集作品，教师点评，家长补充家庭观察。',
+        evidence: '绘画、手抄报、讲故事音视频、家校责任打卡页。',
+        feedback: '按月挑选代表作品，形成“我进步了什么”的可视化记录。',
+      },
+      {
+        title: '游戏化闯关评价',
+        scene: '适合规则意识、文明礼仪、集体合作等启蒙主题。',
+        actors: '小组互评与教师即时评价结合。',
+        evidence: '闯关任务单、小组合作记录、奖励徽章。',
+        feedback: '以徽章、口头鼓励和下一关任务引导持续参与。',
+      },
+    ],
+  },
+  {
+    stage: STAGE_OPTIONS[1],
+    goal: '发展概念理解、理性表达和真实情境中的参与能力。',
+    dimensions: [
+      { name: '知识建构', desc: '概念理解以及在情境中的迁移运用。' },
+      { name: '理性表达', desc: '观点、证据与口头或书面表达质量。' },
+      { name: '公共参与', desc: '围绕班级或社区议题的参与与反思。' },
+    ],
+    evidence: ['讨论记录', '探究报告', '同伴互评表', '反思日志'],
+    cadence: '双周反馈 + 月度诊断 + 学期档案',
+    evaluationMethods: [
+      {
+        title: '议题式表现评价',
+        scene: '适合校园治理、网络文明、法治意识、生态保护等公共议题。',
+        actors: '教师评价论证质量，学生开展自评与同伴互评。',
+        evidence: '观点卡、证据清单、辩论记录、课堂追问记录。',
+        feedback: '围绕“观点是否清楚、证据是否充分、表达是否尊重”给出等级反馈。',
+      },
+      {
+        title: '社区微探究评价',
+        scene: '适合把课堂概念迁移到社区观察、访谈和问卷任务。',
+        actors: '学生小组互评，教师评价探究过程，社区或家长提供观察反馈。',
+        evidence: '访谈提纲、问卷结果、调研报告、行动建议。',
+        feedback: '用问题清单帮助学生修正研究方法和公共参与方式。',
+      },
+      {
+        title: '反思日志评价',
+        scene: '适合价值辨析、青春成长、责任担当等需要持续内化的主题。',
+        actors: '学生自评为主，教师进行周期性批注。',
+        evidence: '双周反思日志、学习目标达成记录、同伴建议。',
+        feedback: '关注观点变化和行为改进，形成月度成长摘要。',
+      },
+    ],
+  },
+  {
+    stage: STAGE_OPTIONS[2],
+    goal: '提升核心素养、跨学科整合能力与社会责任意识。',
+    dimensions: [
+      { name: '核心素养', desc: '问题分析、系统思维与价值判断。' },
+      { name: '综合实践', desc: '项目设计、资料研究与公开展示。' },
+      { name: '自主成长', desc: '目标管理、策略运用与迭代改进。' },
+    ],
+    evidence: ['项目成果', '研究档案', '展示答辩记录', '成长曲线'],
+    cadence: '单元反馈 + 阶段评价 + 年度发展报告',
+    evaluationMethods: [
+      {
+        title: '项目化学习评价',
+        scene: '适合自贸港建设、生态文明、科技创新、红色文化研究等综合主题。',
+        actors: '教师评价研究质量，小组成员互评贡献，学生完成自评复盘。',
+        evidence: '项目计划书、资料卡、阶段成果、最终报告。',
+        feedback: '按“问题意识、证据整合、价值判断、行动方案”形成量规反馈。',
+      },
+      {
+        title: '展示答辩评价',
+        scene: '适合阶段成果展示、同题异构汇报、跨学科探究汇报。',
+        actors: '教师、同伴和外部嘉宾共同评价。',
+        evidence: 'PPT、答辩记录、追问回应、展示录像。',
+        feedback: '突出逻辑表达、证据回应和现场修正能力，给出下一轮迭代建议。',
+      },
+      {
+        title: '成长数据画像',
+        scene: '适合高一到高三持续跟踪核心素养与自主学习能力。',
+        actors: '学生维护个人数据，教师定期诊断，班主任协同跟进。',
+        evidence: '阶段测评、任务完成率、成长曲线、行动清单。',
+        feedback: '将结果转化为个人改进计划，支持分层指导和升学发展规划。',
+      },
+    ],
+  },
+  {
+    stage: STAGE_OPTIONS[3],
+    goal: '对接专业能力、创新能力和社会贡献，形成面向真实问题的综合评价。',
+    dimensions: [
+      { name: '专业融合', desc: '在专业任务中融入价值理解与社会认知。' },
+      { name: '创新研究', desc: '问题界定、方法选择与成果质量。' },
+      { name: '实践责任', desc: '服务学习、实习实践与团队贡献。' },
+    ],
+    evidence: ['课程项目或论文', '实践或实习评价', '团队贡献记录', '电子档案袋'],
+    cadence: '课程反馈 + 学期成果复盘 + 年度评价',
+    evaluationMethods: [
+      {
+        title: '课程项目制评价',
+        scene: '适合专业课程融入思政、社会问题研究、创新创业项目。',
+        actors: '任课教师、团队成员和学生本人共同评价。',
+        evidence: '项目方案、研究论文、数据材料、版本迭代记录。',
+        feedback: '强调专业能力、价值判断和解决真实问题的综合质量。',
+      },
+      {
+        title: '服务学习评价',
+        scene: '适合乡村振兴、社区服务、红色文化传播、志愿讲解等实践活动。',
+        actors: '实践导师、服务对象、团队成员和学生共同参与。',
+        evidence: '服务日志、对象反馈、实践报告、社会影响记录。',
+        feedback: '从服务成效、伦理责任、团队贡献和反思深度四方面反馈。',
+      },
+      {
+        title: '同行与行业反馈',
+        scene: '适合毕业设计、实习实践、创新竞赛和公开路演。',
+        actors: '教师评价基础质量，同行互评可行性，行业导师评价真实适配度。',
+        evidence: '路演记录、专家意见、实习评价、作品集。',
+        feedback: '将评价意见沉淀为作品集修订清单和职业发展建议。',
+      },
+    ],
+  },
+]
+
+const EVAL_TEMPLATE_BANK: Record<StageOption, EvalTaskTemplate[]> = {
+  [STAGE_OPTIONS[0]]: [
+    {
+      id: 'primary-class-citizen',
+      title: '班级规则小任务',
+      summary: '围绕规则意识设计 15 分钟观察任务。',
+      dimension: '合作与规则',
+      actions: ['展示一个情境案例', '小组提出三条班级规则', '每组说明一条可执行规则'],
+      output: '生成一张班级规则观察表，用于一周跟踪。',
+      recommendedEvidence: ['课堂观察记录', '学习单与作品'],
+    },
+    {
+      id: 'primary-home-school',
+      title: '家校责任打卡',
+      summary: '把课堂价值引导延伸到家庭实践记录。',
+      dimension: '价值启蒙',
+      actions: ['学生记录一次周内责任行动', '家长写一句反馈', '班级分享并完成反思'],
+      output: '将责任实践页纳入成长档案袋。',
+      recommendedEvidence: ['成长档案袋', '活动照片或视频'],
+    },
+  ],
+  [STAGE_OPTIONS[1]]: [
+    {
+      id: 'junior-debate',
+      title: '议题辩论任务',
+      summary: '围绕校园公共议题开展结构化辩论。',
+      dimension: '理性表达',
+      actions: ['正反双方各提供三条证据', '辩论后开展同伴互评', '教师点评证据质量'],
+      output: '形成“观点-证据-反思”学习单。',
+      recommendedEvidence: ['讨论记录', '同伴互评表'],
+    },
+    {
+      id: 'junior-community',
+      title: '社区微调研',
+      summary: '将课堂学习应用到一个真实本地公共议题。',
+      dimension: '公共参与',
+      actions: ['选择一个议题', '完成三次访谈或问卷', '展示一份行动建议'],
+      output: '提交反思日志和简版调研报告。',
+      recommendedEvidence: ['探究报告', '反思日志'],
+    },
+  ],
+  [STAGE_OPTIONS[2]]: [
+    {
+      id: 'high-research',
+      title: '研究项目冲刺',
+      summary: '完成一个跨学科微型研究项目。',
+      dimension: '综合实践',
+      actions: ['明确问题与角色分工', '检索并整合证据', '进行公开答辩与追问'],
+      output: '形成项目报告和答辩记录。',
+      recommendedEvidence: ['项目成果', '展示答辩记录'],
+    },
+    {
+      id: 'high-growth',
+      title: '成长诊断闭环',
+      summary: '依据过程数据确定下一轮学习行动。',
+      dimension: '自主成长',
+      actions: ['复盘阶段数据', '自评策略有效性', '设定两条可执行改进措施'],
+      output: '生成个人成长曲线和行动清单。',
+      recommendedEvidence: ['成长曲线', '研究档案'],
+    },
+  ],
+  [STAGE_OPTIONS[3]]: [
+    {
+      id: 'college-practice',
+      title: '实践影响评价',
+      summary: '结合角色证据和影响证据评价社会实践。',
+      dimension: '实践责任',
+      actions: ['明确服务对象与时间线', '跟踪个人角色贡献', '撰写效果与改进说明'],
+      output: '形成实践报告和团队贡献快照。',
+      recommendedEvidence: ['实践或实习评价', '团队贡献记录'],
+    },
+    {
+      id: 'college-innovation',
+      title: '创新提案迭代',
+      summary: '围绕真实问题构建并迭代解决方案。',
+      dimension: '创新研究',
+      actions: ['界定问题与方法路径', '提交多轮迭代稿', '完成最终路演与复盘'],
+      output: '提交项目包和版本迭代记录。',
+      recommendedEvidence: ['课程项目或论文', '电子档案袋'],
+    },
+  ],
+}
+
+const EVAL_LEVEL_RULES = [
+  { min: 90, level: 'A 优秀', tip: '表现稳定且质量较高，可进入迁移提升任务。' },
+  { min: 80, level: 'B 良好', tip: '基础较扎实，建议增加挑战性任务。' },
+  { min: 70, level: 'C 达标', tip: '达到基本要求，下一步聚焦薄弱点改进。' },
+  { min: 60, level: 'D 待提升', tip: '部分指标低于目标，需要教师提供结构化练习支持。' },
+  { min: 0, level: 'E 重点支持', tip: '建议建立“一生一策”跟进方案。' },
+]
+
+const EVAL_IMPLEMENTATION_STEPS = [
+  '从课程目标中提取可观察、可记录、可反馈的评价指标。',
+  '设计课堂、项目、展示等分层任务，覆盖不同学习表现。',
+  '汇集教师、学生、同伴与家庭侧证据，形成多主体评价数据。',
+  '生成诊断结果与针对性改进建议，避免只给分不反馈。',
+  '定期复盘评价数据，并据此更新教学策略与学习支持。',
+]
+
 function parsePopupAIHistory(raw: string | null): PopupAIHistoryItem[] {
   if (!raw) return []
   try {
@@ -846,9 +1146,9 @@ function StageGate({
   return (
     <div className="stage-gate">
       <div className="stage-gate-card">
-        <div className="stage-gate-eyebrow">海南思政智慧资源库</div>
-        <h1 className="stage-gate-title">先选择学段，再进入欢迎页</h1>
-        <p className="stage-gate-sub">系统将按你选择的学段优先筛选资源，也可使用游客模式浏览全学段内容。</p>
+        <div className="stage-gate-eyebrow">海南思政教育智慧资源平台</div>
+        <h1 className="stage-gate-title">选择学段，进入欢迎页</h1>
+        <p className="stage-gate-sub">选择学段后，将进入欢迎页，再由欢迎页选择资源库、专题或多元评价入口。</p>
         <div className="stage-gate-grid">
           {stageCounts.map(({ stage, count }) => (
             <button
@@ -857,16 +1157,16 @@ function StageGate({
               onClick={() => onSelectStage(stage)}
             >
               <span className="stage-gate-name">{stage}</span>
-              <span className="stage-gate-count">{count} 条</span>
+              <span className="stage-gate-count">{count} 条素材</span>
             </button>
           ))}
         </div>
         <div className="stage-gate-actions">
           <button className="stage-gate-primary" onClick={onContinue}>
-            进入欢迎页（{selectedStage}）
+            进入{selectedStage}欢迎页
           </button>
           <button className="stage-gate-guest" onClick={onGuest}>
-            游客模式（浏览全部学段）
+            游客模式（全学段）
           </button>
         </div>
       </div>
@@ -878,6 +1178,7 @@ function Splash({
   onEnter,
   onEnterFtz,
   onEnterAlliance,
+  onEnterEvaluation,
   onBackToStage,
   guestMode,
   selectedStage,
@@ -885,6 +1186,7 @@ function Splash({
   onEnter: () => void
   onEnterFtz: () => void
   onEnterAlliance: () => void
+  onEnterEvaluation: () => void
   onBackToStage: () => void
   guestMode: boolean
   selectedStage: string
@@ -943,6 +1245,7 @@ function Splash({
           <button className="splash-enter-btn" onClick={onEnter}>进入海南特色大中小学思政课智慧资源库 →</button>
           <button className="splash-ftz-btn" onClick={onEnterFtz}>🏝️ 海南自由贸易港大思政专题单元（{ftzCount}条）→</button>
           <button className="splash-alliance-btn" onClick={onEnterAlliance}>🤝 海南省大中小学思政课一体化建设区域联盟专题（{allianceCount}条）→</button>
+          <button className="splash-eval-btn" onClick={onEnterEvaluation}>🧩 学生多元评价体系入口 →</button>
           <button className="splash-stage-switch" onClick={onBackToStage}>切换学段/游客模式</button>
         </div>
         <div className="splash-bottom-line" />
@@ -951,8 +1254,312 @@ function Splash({
   )
 }
 
+function DiverseEvaluationPage({
+  onBackToSplash,
+  onBackToStage,
+  onGoToLibrary,
+  onSelectStage,
+  guestMode,
+  selectedStage,
+}: {
+  onBackToSplash: () => void
+  onBackToStage: () => void
+  onGoToLibrary: () => void
+  onSelectStage: (stage: StageOption) => void
+  guestMode: boolean
+  selectedStage: string
+}) {
+  const initialStage = useMemo(
+    () => normalizeStage(selectedStage) as StageOption,
+    [selectedStage],
+  )
+  const [activeStage, setActiveStage] = useState<StageOption>(initialStage)
+  const [selectedEvidence, setSelectedEvidence] = useState<string[]>([])
+  const [activeDimension, setActiveDimension] = useState('')
+  const [appliedTemplateId, setAppliedTemplateId] = useState('')
+  const [teacherScore, setTeacherScore] = useState(82)
+  const [selfScore, setSelfScore] = useState(78)
+  const [peerScore, setPeerScore] = useState(80)
+  const [runResult, setRunResult] = useState<EvalRunResult | null>(null)
 
-// ── 上传素材 Modal ──────────────────────────────────────────────
+  useEffect(() => {
+    setActiveStage(initialStage)
+  }, [initialStage])
+
+  const activeScheme = useMemo(
+    () => EVAL_STAGE_SCHEMES.find((scheme) => scheme.stage === activeStage) ?? EVAL_STAGE_SCHEMES[0],
+    [activeStage],
+  )
+
+  const activeTemplates = useMemo(
+    () => EVAL_TEMPLATE_BANK[activeStage] ?? [],
+    [activeStage],
+  )
+
+  useEffect(() => {
+    setActiveDimension(activeScheme.dimensions[0]?.name ?? '')
+    setSelectedEvidence([])
+    setAppliedTemplateId('')
+    setRunResult(null)
+  }, [activeScheme])
+
+  const activeDimensionInfo = useMemo(
+    () => activeScheme.dimensions.find((dimension) => dimension.name === activeDimension) ?? activeScheme.dimensions[0],
+    [activeDimension, activeScheme],
+  )
+
+  const appliedTemplate = useMemo(
+    () => activeTemplates.find((template) => template.id === appliedTemplateId) ?? null,
+    [activeTemplates, appliedTemplateId],
+  )
+
+  const toggleEvidence = (item: string) => {
+    setSelectedEvidence((prev) =>
+      prev.includes(item) ? prev.filter((entry) => entry !== item) : [...prev, item],
+    )
+  }
+
+  const applyTemplate = (template: EvalTaskTemplate) => {
+    setAppliedTemplateId(template.id)
+    if (activeScheme.dimensions.some((dimension) => dimension.name === template.dimension)) {
+      setActiveDimension(template.dimension)
+    }
+    const matchedEvidence = template.recommendedEvidence.filter((entry) => activeScheme.evidence.includes(entry))
+    const defaultEvidence = activeScheme.evidence.slice(0, Math.min(3, activeScheme.evidence.length))
+    setSelectedEvidence(matchedEvidence.length > 0 ? matchedEvidence : defaultEvidence)
+    setRunResult(null)
+  }
+
+  const runEvaluationDemo = () => {
+    const weightedScore = teacherScore * 0.5 + selfScore * 0.25 + peerScore * 0.25
+    const evidenceBonus = Math.min(selectedEvidence.length * 2, 10)
+    const finalScore = Math.min(100, Math.round(weightedScore + evidenceBonus))
+    const levelRule = EVAL_LEVEL_RULES.find((rule) => finalScore >= rule.min) ?? EVAL_LEVEL_RULES[EVAL_LEVEL_RULES.length - 1]
+
+    const tips: string[] = []
+    if (teacherScore < 70) tips.push('教师评价偏低：建议将任务拆分为示范练习与展示表达两个环节。')
+    if (selfScore < 70) tips.push('学生自评偏低：建议加入每周反思卡，并要求写明具体证据。')
+    if (peerScore < 70) tips.push('同伴互评偏低：建议先展示评价量规样例，再组织互评。')
+    if (selectedEvidence.length < 2) tips.push('过程证据不足：请至少选择两类过程性证据。')
+    if (activeDimensionInfo) {
+      tips.push(`当前维度：${activeDimensionInfo.name} - ${activeDimensionInfo.desc}`)
+    }
+    if (tips.length === 0) {
+      tips.push('当前表现稳定，可增加迁移应用任务提升挑战度。')
+    }
+
+    setRunResult({
+      score: finalScore,
+      level: levelRule.level,
+      summary: `加权得分 ${Math.round(weightedScore)}，过程证据加分 ${evidenceBonus}。${levelRule.tip}`,
+      tips: tips.slice(0, 4),
+      timestamp: new Date().toLocaleString(),
+    })
+  }
+
+  const handleStageTab = (stage: StageOption) => {
+    setActiveStage(stage)
+    onSelectStage(stage)
+  }
+
+  return (
+    <div className="eval-page">
+      <section className="eval-hero">
+        <div className="eval-hero-badge">多元评价系统</div>
+        <h1 className="eval-hero-title">{activeStage}多元评价首页</h1>
+        <p className="eval-hero-sub">
+          当前模式：{guestMode ? '游客模式（可切换全学段）' : `学段模式（${activeStage}）`}。
+          本页支持学段切换、维度选择、证据勾选、任务模板套用与即时评分演示。
+        </p>
+        <div className="eval-stage-tabs" role="tablist" aria-label="stage tabs">
+          {STAGE_OPTIONS.map((stage) => (
+            <button
+              key={stage}
+              type="button"
+              role="tab"
+              className={`eval-stage-tab ${activeStage === stage ? 'active' : ''}`}
+              onClick={() => handleStageTab(stage as StageOption)}
+              aria-selected={activeStage === stage}
+            >
+              {stage}
+            </button>
+          ))}
+        </div>
+        <div className="eval-hero-actions">
+          <button className="eval-action-primary" onClick={onGoToLibrary}>进入资源库</button>
+          <button className="eval-action-secondary" onClick={onBackToSplash}>返回欢迎页</button>
+          <button className="eval-action-secondary" onClick={onBackToStage}>切换学段/模式</button>
+        </div>
+      </section>
+
+      <section className="eval-section">
+        <h2 className="eval-section-title">学段画像</h2>
+        <div className="eval-current-grid">
+          <article className="eval-stage-summary">
+            <h3>{activeScheme.stage}评价目标</h3>
+            <p>{activeScheme.goal}</p>
+            <div className="eval-cadence-chip">评价节奏：{activeScheme.cadence}</div>
+            <div className="eval-dimension-grid">
+              {activeScheme.dimensions.map((dimension) => (
+                <button
+                  key={dimension.name}
+                  type="button"
+                  className={`eval-dimension-btn ${activeDimension === dimension.name ? 'active' : ''}`}
+                  onClick={() => setActiveDimension(dimension.name)}
+                >
+                  <strong>{dimension.name}</strong>
+                  <span>{dimension.desc}</span>
+                </button>
+              ))}
+            </div>
+          </article>
+
+          <article className="eval-evidence-panel">
+            <h3>证据清单</h3>
+            <div className="eval-evidence-list">
+              {activeScheme.evidence.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={`eval-evidence-chip ${selectedEvidence.includes(item) ? 'active' : ''}`}
+                  onClick={() => toggleEvidence(item)}
+                >
+                  {selectedEvidence.includes(item) ? '已选择' : '选择'}：{item}
+                </button>
+              ))}
+            </div>
+            <p className="eval-evidence-tip">已选择 {selectedEvidence.length} 类证据，建议至少选择两类。</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="eval-section">
+        <h2 className="eval-section-title">多元评价方式</h2>
+        <div className="eval-method-grid">
+          {activeScheme.evaluationMethods.map((method) => (
+            <article key={method.title} className="eval-method-card">
+              <div className="eval-method-head">
+                <h3>{method.title}</h3>
+                <span>{activeScheme.stage}</span>
+              </div>
+              <p className="eval-method-scene">{method.scene}</p>
+              <dl className="eval-method-list">
+                <div>
+                  <dt>评价主体</dt>
+                  <dd>{method.actors}</dd>
+                </div>
+                <div>
+                  <dt>证据材料</dt>
+                  <dd>{method.evidence}</dd>
+                </div>
+                <div>
+                  <dt>反馈方式</dt>
+                  <dd>{method.feedback}</dd>
+                </div>
+              </dl>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="eval-section">
+        <h2 className="eval-section-title">任务模板</h2>
+        <div className="eval-template-grid">
+          {activeTemplates.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              className={`eval-template-card ${appliedTemplateId === template.id ? 'active' : ''}`}
+              onClick={() => applyTemplate(template)}
+            >
+              <span className="eval-template-title">{template.title}</span>
+              <span className="eval-template-summary">{template.summary}</span>
+              <span className="eval-template-dimension">评价维度：{template.dimension}</span>
+            </button>
+          ))}
+        </div>
+
+        {appliedTemplate ? (
+          <div className="eval-template-output">
+            <h3>已套用模板：{appliedTemplate.title}</h3>
+            <ul>
+              {appliedTemplate.actions.map((action) => (
+                <li key={action}>{action}</li>
+              ))}
+            </ul>
+            <p><strong>产出要求：</strong> {appliedTemplate.output}</p>
+          </div>
+        ) : (
+          <div className="eval-template-empty">点击任一模板，将自动关联评价维度与推荐证据。</div>
+        )}
+      </section>
+
+      <section className="eval-section">
+        <h2 className="eval-section-title">运行评价演示</h2>
+        <div className="eval-run-grid">
+          <div className="eval-run-controls">
+            <label className="eval-slider-row">
+              教师评价：<span>{teacherScore}</span>
+              <input type="range" min={0} max={100} value={teacherScore} onChange={(event) => setTeacherScore(Number(event.target.value))} />
+            </label>
+            <label className="eval-slider-row">
+              学生自评：<span>{selfScore}</span>
+              <input type="range" min={0} max={100} value={selfScore} onChange={(event) => setSelfScore(Number(event.target.value))} />
+            </label>
+            <label className="eval-slider-row">
+              同伴互评：<span>{peerScore}</span>
+              <input type="range" min={0} max={100} value={peerScore} onChange={(event) => setPeerScore(Number(event.target.value))} />
+            </label>
+            <button type="button" className="eval-run-btn" onClick={runEvaluationDemo}>生成评价结果</button>
+          </div>
+
+          <div className="eval-run-result">
+            {runResult ? (
+              <>
+                <div className="eval-result-head">
+                  <strong>综合得分：{runResult.score}</strong>
+                  <span>{runResult.level}</span>
+                </div>
+                <p>{runResult.summary}</p>
+                <ul>
+                  {runResult.tips.map((tip) => (
+                    <li key={tip}>{tip}</li>
+                  ))}
+                </ul>
+                <div className="eval-result-time">生成时间：{runResult.timestamp}</div>
+              </>
+            ) : (
+              <div className="eval-result-empty">拖动滑块并点击生成评价结果，即可获得可执行反馈。</div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="eval-section">
+        <h2 className="eval-section-title">核心原则</h2>
+        <div className="eval-principle-grid">
+          {EVAL_CORE_PRINCIPLES.map((item) => (
+            <article key={item.title} className="eval-principle-card">
+              <h3>{item.title}</h3>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="eval-section eval-section-note">
+        <h2 className="eval-section-title">实施步骤</h2>
+        <ol className="eval-step-list">
+          {EVAL_IMPLEMENTATION_STEPS.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  )
+}
+
+
 function UploadModal({ scene, onClose, onAdd }: { scene: UploadScene; onClose: () => void; onAdd: (m: Material) => void }) {
   const allianceScene = scene === 'alliance_same_class'
   const [title, setTitle] = useState(allianceScene ? '【同课异构】' : '')
@@ -1067,7 +1674,7 @@ function UploadModal({ scene, onClose, onAdd }: { scene: UploadScene; onClose: (
             <label className="uf-label">素材类型</label>
             <div className="uf-radio-row">
               {['document','video','image','audio','multimedia'].map(t=>(
-                <label key={t} className={`uf-radio${type===t?' active':''}`} onClick={()=>setType(t)}>{TICO[t]||'📄'} {t}</label>
+                <label key={t} className={`uf-radio${type===t?' active':''}`} onClick={()=>setType(t)}>{TICO[t]||'📄'} {TYPE_LABELS[t] || t}</label>
               ))}
             </div>
           </div>
@@ -1308,7 +1915,7 @@ function DetailModal({ m, onClose }: { m: Material; onClose: () => void }) {
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
         <div className="modal-header">
-          <span className="type-badge-lg" style={{background:`${pct}22`,color:pct}}>{TICO[m.type]||'📄'} {m.type}</span>
+          <span className="type-badge-lg" style={{background:`${pct}22`,color:pct}}>{TICO[m.type]||'📄'} {TYPE_LABELS[m.type] || m.type}</span>
           <div className="modal-stage-row">{(m.stage||[]).map(s => <span key={s} className="stage-badge" style={{color:STAGE_CLR[s]||'#94a3b8',background:STAGE_BG[s]||'rgba(148,163,184,0.12)'}}>{s}</span>)}</div>
           {m.period && <span className="period-badge" style={{color:pct,background:`${pct}18`}}>{m.period}</span>}
         </div>
@@ -1609,6 +2216,7 @@ export default function App() {
   const initialEntry = useMemo(() => loadEntryState(), [])
   const [entered, setEntered] = useState(false)
   const [stageConfirmed, setStageConfirmed] = useState(false)
+  const [evaluationOpened, setEvaluationOpened] = useState(false)
   const [guestMode, setGuestMode] = useState<boolean>(() => initialEntry.guestMode === true)
   const [selectedStage, setSelectedStage] = useState<string>(() => {
     if (typeof initialEntry.stage === 'string' && initialEntry.stage) return normalizeStage(initialEntry.stage)
@@ -1636,6 +2244,11 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('uploaded_materials')||'[]') } catch { return [] }
   })
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking')
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
   const [page, setPage] = useState(1)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const PAGE_SIZE = 10
@@ -1657,6 +2270,16 @@ export default function App() {
     const payload: EntryState = { stage: selectedStage, guestMode }
     localStorage.setItem(ENTRY_STORAGE_KEY, JSON.stringify(payload))
   }, [selectedStage, guestMode])
+
+  useEffect(() => {
+    localStorage.setItem(THEME_STORAGE_KEY, themeMode)
+    document.body.classList.toggle('theme-dark', themeMode === 'dark')
+    document.body.style.colorScheme = themeMode
+    return () => {
+      document.body.classList.remove('theme-dark')
+      document.body.style.colorScheme = ''
+    }
+  }, [themeMode])
 
   useEffect(() => {
     let cancelled = false
@@ -1748,6 +2371,13 @@ export default function App() {
     ;(m.stage||[]).forEach((s:string) => stageCount[s]=(stageCount[s]||0)+1)
   })
   const topTopics = Object.entries(topicCount).sort((a,b)=>b[1]-a[1]).slice(0,12)
+  const availableProvinceOptions = useMemo(() => (rg ? REGION_GROUPS[rg] || [] : []), [rg])
+  useEffect(() => {
+    if (pv && (!rg || !availableProvinceOptions.includes(pv))) {
+      setPv('')
+      setPage(1)
+    }
+  }, [availableProvinceOptions, pv, rg])
   const provinceDistribution = useMemo(() => {
     const provinceCount: Record<string, number> = {}
     list.forEach((material) => {
@@ -1802,6 +2432,7 @@ export default function App() {
           setSelectedStage(normalizedStage)
           setSt(normalizedStage)
           setStageConfirmed(true)
+          setEvaluationOpened(false)
           setEntered(false)
           setFtzMode(false)
           setAllianceMode(false)
@@ -1810,6 +2441,7 @@ export default function App() {
           setGuestMode(true)
           setSt('')
           setStageConfirmed(true)
+          setEvaluationOpened(false)
           setEntered(false)
           setFtzMode(false)
           setAllianceMode(false)
@@ -1818,25 +2450,70 @@ export default function App() {
     )
   }
 
+  if (evaluationOpened) {
+    return (
+      <DiverseEvaluationPage
+        onBackToSplash={() => {
+          setEvaluationOpened(false)
+          setEntered(false)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
+        onBackToStage={() => {
+          setEvaluationOpened(false)
+          setStageConfirmed(false)
+          setEntered(false)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
+        onGoToLibrary={() => {
+          setEvaluationOpened(false)
+          setEntered(true)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
+        onSelectStage={(stage) => {
+          const normalizedStage = normalizeStage(stage)
+          setSelectedStage(normalizedStage)
+          if (!guestMode) {
+            setSt(normalizedStage)
+          }
+        }}
+        guestMode={guestMode}
+        selectedStage={selectedStage}
+      />
+    )
+  }
+
   if (!entered) {
     return (
       <Splash
         onEnter={() => {
+          setEvaluationOpened(false)
           setEntered(true)
           setFtzMode(false)
           setAllianceMode(false)
         }}
         onEnterFtz={() => {
+          setEvaluationOpened(false)
           setEntered(true)
           setFtzMode(true)
           setAllianceMode(false)
         }}
         onEnterAlliance={() => {
+          setEvaluationOpened(false)
           setEntered(true)
           setFtzMode(false)
           setAllianceMode(true)
         }}
+        onEnterEvaluation={() => {
+          setEvaluationOpened(true)
+          setEntered(false)
+          setFtzMode(false)
+          setAllianceMode(false)
+        }}
         onBackToStage={() => {
+          setEvaluationOpened(false)
           setStageConfirmed(false)
           setEntered(false)
           setFtzMode(false)
@@ -1891,10 +2568,19 @@ export default function App() {
         </div>
         <div className="topbar-tools">
           <button className="topbar-lucky-btn" onClick={handleLuckyPick} disabled={list.length === 0}>🎲 随机一条</button>
+          <button
+            className={`topbar-theme-btn${themeMode === 'dark' ? ' is-dark' : ''}`}
+            onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+            aria-label={themeMode === 'dark' ? '切换浅色模式' : '切换深色模式'}
+            title={themeMode === 'dark' ? '切换浅色模式' : '切换深色模式'}
+          >
+            {themeMode === 'dark' ? '☀ 浅色' : '🌙 深色'}
+          </button>
           <span className={`api-pill ${apiStatus}`}>{apiStatusLabel}</span>
         </div>
-        <button className="topbar-back" onClick={() => { setEntered(false); setFtzMode(false); setAllianceMode(false) }}>← 返回首页</button>
-        <button className="topbar-mode-btn" onClick={() => { setStageConfirmed(false); setEntered(false); setFtzMode(false); setAllianceMode(false) }}>切换学段/模式</button>
+        <button className="topbar-back" onClick={() => { setEvaluationOpened(false); setEntered(false); setFtzMode(false); setAllianceMode(false) }}>← 返回首页</button>
+        <button className="topbar-mode-btn" onClick={() => { setEvaluationOpened(false); setStageConfirmed(false); setEntered(false); setFtzMode(false); setAllianceMode(false) }}>切换学段/模式</button>
+        <button className="topbar-eval-btn" onClick={() => { setEvaluationOpened(true); setFtzMode(false); setAllianceMode(false) }}>🧩 多元评价</button>
         <button
           className="topbar-upload-btn"
           onClick={() => {
@@ -2220,9 +2906,14 @@ export default function App() {
           {!ftzMode && !allianceMode && (
             <div className="filter-line filter-line-province">
               <span className="filter-line-label">省份筛选</span>
-              <select className="prov-select filter-select" value={pv} onChange={e=>{setPv(e.target.value);setRg('');setPage(1)}}>
-                <option value="">全部省份</option>
-                {ALL_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+              <select
+                className="prov-select filter-select"
+                value={pv}
+                disabled={!rg}
+                onChange={e=>{setPv(e.target.value);setPage(1)}}
+              >
+                <option value="">{rg ? '全部省份' : '请先选择地区'}</option>
+                {availableProvinceOptions.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
           )}
@@ -2281,7 +2972,7 @@ export default function App() {
                 return (
                   <div key={m.id} className={`mat-card${isRed?' mat-card-red':''}`} onClick={()=>setSelected(m)}>
                     <div className="mat-badges">
-                      <span className="type-badge-sm" style={{color:pct2,background:`${pct2}18`}}>{TICO[m.type]||'📄'} {m.type}</span>
+                      <span className="type-badge-sm" style={{color:pct2,background:`${pct2}18`}}>{TICO[m.type]||'📄'} {TYPE_LABELS[m.type] || m.type}</span>
                       <span className="period-badge-sm" style={{color:pct2,background:`${pct2}18`}}>{m.period||'现当代'}</span>
                     </div>
                     <h3 className="mat-title">{m.title}</h3>
@@ -2345,7 +3036,7 @@ export default function App() {
                 <span className="s-title-meta">覆盖 {provinceDistribution.coveredProvinceCount}</span>
               </div>
               <div className="province-window-tip">
-                {pv ? `已筛选：${pv}（${provinceDistribution.selectedCount}）` : '点击省份可快速筛选'}
+                {!rg ? '请先选择地区，再筛选对应省份' : pv ? `已筛选：${pv}（${provinceDistribution.selectedCount}）` : '点击省份可快速筛选'}
               </div>
               {provinceDistribution.top10.length === 0 ? (
                 <div className="province-window-empty">暂无省份数据</div>
@@ -2354,7 +3045,12 @@ export default function App() {
                     key={name}
                     type="button"
                     className={`s-bar-row s-bar-row-province${pv===name?' is-active':''}`}
-                    onClick={() => { setPv(pv===name ? '' : name); setRg(''); setPage(1) }}
+                    disabled={!rg}
+                    onClick={() => {
+                      if (!rg) return
+                      setPv(pv===name ? '' : name)
+                      setPage(1)
+                    }}
                     aria-pressed={pv===name}
                     title={`${name}：${count} 条，占比 ${percent}%`}
                   >

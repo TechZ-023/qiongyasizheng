@@ -1,0 +1,197 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>海南思政资源库 - 记录重建页</title>
+    <style>
+      :root {
+        --bg: #f6f4ef;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #4b5563;
+        --line: #e5e7eb;
+        --primary: #b45309;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        color: var(--text);
+        background: linear-gradient(160deg, #fff8ee 0%, #f0f7f5 100%);
+      }
+      .page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 24px 14px 40px;
+      }
+      .hero, .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+      }
+      .hero {
+        padding: 20px;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 12px;
+        color: #065f46;
+        background: #d1fae5;
+        border-radius: 999px;
+        padding: 4px 10px;
+      }
+      h1 {
+        margin: 12px 0 8px;
+        font-size: clamp(24px, 3vw, 36px);
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        text-decoration: none;
+        padding: 9px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        color: var(--text);
+        background: #fff;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .btn.main {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+      }
+      .grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 12px;
+      }
+      .card { padding: 16px; }
+      .c6 { grid-column: span 6; }
+      .c4 { grid-column: span 4; }
+      .c12 { grid-column: span 12; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      ul { margin: 0; padding-left: 18px; line-height: 1.75; }
+      li + li { margin-top: 4px; }
+      .timeline { list-style: none; padding: 0; margin: 0; }
+      .timeline li {
+        padding: 10px;
+        border: 1px dashed #f1d5b8;
+        border-radius: 10px;
+        background: #fffaf4;
+      }
+      .timeline li + li { margin-top: 8px; }
+      .date { font-weight: 800; color: #0f766e; margin-bottom: 4px; }
+      .code {
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        color: #374151;
+      }
+      .foot { margin-top: 12px; font-size: 13px; color: #6b7280; }
+      @media (max-width: 900px) {
+        .c6, .c4 { grid-column: span 12; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <span class="tag">2026-04-30 重建</span>
+        <h1>海南特色大中小学思政课智慧资源库 · 记录重建页</h1>
+        <p>
+          本页依据记录文件重新生成，覆盖 2026-04-02、04-03、04-05、04-06、04-07、04-11 的功能演进与上传节点。
+          当前版本为纯静态页面，不依赖 Vite 开发服务。
+        </p>
+        <div class="actions">
+          <a class="btn main" href="/memory-rebuild-showcase.html">当前页面</a>
+          <a class="btn" href="/latest-upload-showcase.html">上次导览页</a>
+          <a class="btn" href="/deepseek.html">AI 辅助页</a>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card c6">
+          <h2>阶段里程碑</h2>
+          <ul class="timeline">
+            <li>
+              <div class="date">2026-04-02</div>
+              <div>修复构建阻塞、完善筛选与弹窗基础、完成首轮上传链路。</div>
+              <div class="code">265e84f</div>
+            </li>
+            <li>
+              <div class="date">2026-04-03</div>
+              <div>学段入口/游客模式、联盟专区增强、右侧统计可点击筛选。</div>
+              <div class="code">48bca66 / 2a1fdc1 / 6decc7b</div>
+            </li>
+            <li>
+              <div class="date">2026-04-05</div>
+              <div>联盟专题结构化、校徽全页展示、同课异构上传语义化。</div>
+              <div class="code">dd74b30</div>
+            </li>
+            <li>
+              <div class="date">2026-04-06 ~ 2026-04-07</div>
+              <div>新增自贸港封关百日成绩单，按 5180 运行版本持续同步上传。</div>
+              <div class="code">457f00f</div>
+            </li>
+            <li>
+              <div class="date">2026-04-11</div>
+              <div>多元评价二次升级：执行清单、改进单、台账与 CSV 导出。</div>
+            </li>
+          </ul>
+        </article>
+
+        <article class="card c6">
+          <h2>能力清单</h2>
+          <ul>
+            <li>学段先选 + 游客模式。</li>
+            <li>四行筛选布局 + 右侧统计联动筛选。</li>
+            <li>弹窗 AI 一键生成 + 追问润色。</li>
+            <li>联盟真实资源、咨询入口与同课异构上传场景。</li>
+            <li>自贸港封关百日成绩单。</li>
+            <li>多元评价执行台账与 CSV 导出。</li>
+          </ul>
+        </article>
+
+        <article class="card c4">
+          <h2>运行策略</h2>
+          <ul>
+            <li>运行目录：qiongyasizheng-rebuild。</li>
+            <li>上传目录：qiongyasizheng。</li>
+            <li>临时备份文件默认不上传。</li>
+          </ul>
+        </article>
+
+        <article class="card c4">
+          <h2>验证状态</h2>
+          <ul>
+            <li>关键阶段均有构建通过记录。</li>
+            <li>主仓库与运行副本持续同步。</li>
+            <li>当前页面为静态版本，可独立打开。</li>
+          </ul>
+        </article>
+
+        <article class="card c4">
+          <h2>问题复盘</h2>
+          <ul>
+            <li>此前 5180 无法打开，核心原因是 Vite 依赖加载失败。</li>
+            <li>本页已去除该依赖路径，直接使用静态服务访问。</li>
+          </ul>
+        </article>
+      </section>
+
+      <p class="foot">文件：/public/memory-rebuild-showcase.html</p>
+    </main>
+  </body>
+</html>
